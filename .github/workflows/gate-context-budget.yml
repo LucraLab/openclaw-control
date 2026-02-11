@@ -1,0 +1,31 @@
+name: Context Budget
+
+on:
+  pull_request:
+
+jobs:
+  context-budget:
+    name: context-budget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run context budget tests
+        run: node scripts/context_budget.test.js
+
+      - name: Run context budget check
+        run: node scripts/run_context_budget.js --ci
+
+      - name: Upload budget report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: context-budget-report
+          path: tmp/context-budget-report.json
+          retention-days: 30

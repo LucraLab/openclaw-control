@@ -1,0 +1,25 @@
+{
+  "_comment": "Grandfathered budget overrides. Roles listed here get WARN instead of FAIL. Remove entries as roles are trimmed to fit default budgets.",
+  "roles": {
+    "delivery_manager": {
+      "lines": 50
+    },
+    "fullstack_builder": {
+      "lines": 50
+    },
+    "platform_builder": {
+      "lines": 50
+    },
+    "qa_gatekeeper": {
+      "lines": 50
+    },
+    "security_auditor": {
+      "lines": 50
+    },
+    "insights_analyst": {
+      "chars": 6500,
+      "words": 600,
+      "lines": 210
+    }
+  }
+}
