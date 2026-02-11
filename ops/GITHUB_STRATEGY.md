@@ -169,7 +169,7 @@ Format: `bootstrap@N.M.P` (semver)
 
 ```powershell
 # Navigate to workspace
-cd C:\Users\james\.ssh\Workspace
+cd <LOCAL_WORKSPACE_PATH>
 
 # Create the repo directory
 mkdir openclaw-control
@@ -187,15 +187,17 @@ mkdir -p .github/workflows
 
 # Copy existing deliverables into the repo
 # (From the deploy-skippy deliverables folder)
-Copy-Item "..\deploy-skippy\deliverables\DASHBOARD_ORG_SNAPSHOT.md" "inventory\dashboard\ORG_SNAPSHOT.md"
-Copy-Item "..\deploy-skippy\deliverables\ORG_SNAPSHOT.md" "inventory\builder\ORG_SNAPSHOT.md" -ErrorAction SilentlyContinue
-Copy-Item "..\deploy-skippy\deliverables\control-plane\MERGED_ROLE_REGISTRY.yaml" "registry\ROLE_REGISTRY.yaml"
-Copy-Item "..\deploy-skippy\deliverables\BOOTSTRAP_SPEC_V1.md" "bootstrap\BOOTSTRAP_SPEC.md" -ErrorAction SilentlyContinue
-Copy-Item "..\deploy-skippy\deliverables\DASHBOARD_BOOTSTRAP_SPEC_V1.md" "bootstrap\DASHBOARD_SUPPLEMENT.md"
-Copy-Item "..\deploy-skippy\deliverables\control-plane\TRIAGE_REPORT.md" "ops\runbooks\TRIAGE_REPORT_20260211.md"
-Copy-Item "..\deploy-skippy\deliverables\control-plane\CONTROL_REPO_LAYOUT.md" "."
-Copy-Item "..\deploy-skippy\deliverables\control-plane\CI_GATES_PLAN.md" ".github\"
-Copy-Item "..\deploy-skippy\deliverables\control-plane\GITHUB_STRATEGY.md" "."
+# Copy deliverables from local staging folder into repo structure
+# (file paths redacted — use your local deliverables location)
+Copy-Item "<DELIVERABLES_PATH>\DASHBOARD_ORG_SNAPSHOT.md" "inventory\dashboard\ORG_SNAPSHOT.md"
+Copy-Item "<DELIVERABLES_PATH>\ORG_SNAPSHOT.md" "inventory\builder\ORG_SNAPSHOT.md" -ErrorAction SilentlyContinue
+Copy-Item "<DELIVERABLES_PATH>\MERGED_ROLE_REGISTRY.yaml" "registry\ROLE_REGISTRY.yaml"
+Copy-Item "<DELIVERABLES_PATH>\BOOTSTRAP_SPEC_V1.md" "bootstrap\BOOTSTRAP_SPEC.md" -ErrorAction SilentlyContinue
+Copy-Item "<DELIVERABLES_PATH>\DASHBOARD_BOOTSTRAP_SPEC_V1.md" "bootstrap\DASHBOARD_SUPPLEMENT.md"
+Copy-Item "<DELIVERABLES_PATH>\TRIAGE_REPORT.md" "ops\runbooks\TRIAGE_REPORT_20260211.md"
+Copy-Item "<DELIVERABLES_PATH>\CONTROL_REPO_LAYOUT.md" "."
+Copy-Item "<DELIVERABLES_PATH>\CI_GATES_PLAN.md" ".github\"
+Copy-Item "<DELIVERABLES_PATH>\GITHUB_STRATEGY.md" "."
 
 # Create .gitignore
 @"
@@ -246,13 +248,13 @@ cd /root
 mkdir -p /tmp/openclaw-control/{inventory/dashboard,inventory/builder,registry/schema,bootstrap,ops/runbooks,ops/proofs,.github/workflows}
 
 # Copy dashboard inventory
-cp /root/proofs/org_discovery_dashboard_20260210T223433Z/DASHBOARD_ORG_SNAPSHOT.md \
+cp <PATH_REDACTED>/DASHBOARD_ORG_SNAPSHOT.md \
    /tmp/openclaw-control/inventory/dashboard/ORG_SNAPSHOT.md
 
-# Copy builder inventory (via Tailscale SSH)
-ssh -o ConnectTimeout=10 openclaw2@100.75.216.57 \
-  "cat /home/openclaw/.openclaw/proofs/org_discovery_20260210T221708Z/ORG_SNAPSHOT.md" \
-  > /tmp/openclaw-control/inventory/builder/ORG_SNAPSHOT.md
+# Copy builder inventory (via internal network)
+# ssh -o ConnectTimeout=10 <BUILDER_USER>@<BUILDER_TAILSCALE_IP> \
+#   "cat <PATH_REDACTED>/ORG_SNAPSHOT.md" \
+#   > /tmp/openclaw-control/inventory/builder/ORG_SNAPSHOT.md
 
 # Copy merged registry (uploaded from local)
 # (This file is generated and SCP'd from Windows)

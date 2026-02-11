@@ -1,0 +1,52 @@
+# Public Safety Scan Results — 2026-02-11
+# Pre-redaction scan of openclaw-control repo
+
+## Summary
+- Files scanned: 12 (all committed files excluding .git)
+- Sensitive patterns found: YES (see categories below)
+- Action taken: All patterns redacted
+
+## Categories Found (Pre-Redaction)
+
+### A. IPv4 Addresses
+- 4 unique IPs found across 4 files
+- Locations: registry/ROLE_REGISTRY.yaml, ops/triage/TRIAGE_REPORT.md, ops/proof-packs/PROOF_PACK.md, ops/GITHUB_STRATEGY.md
+- Action: Replaced with <DASHBOARD_VPS_IPV4>, <BUILDER_VPS_IPV4>, <DASHBOARD_TAILSCALE_IP>, <BUILDER_TAILSCALE_IP>
+
+### B. Hostnames
+- 1 hostinger hostname pattern found
+- Location: registry/ROLE_REGISTRY.yaml
+- Action: Replaced with <BUILDER_HOST>
+
+### C. Localhost + Port Combinations
+- 15+ occurrences of 127.0.0.1 with specific ports
+- Locations: ops/triage/TRIAGE_REPORT.md, ops/proof-packs/PROOF_PACK.md
+- Action: Replaced with <INTERNAL_ENDPOINT>, <INTERNAL_HOST>, <INTERNAL_PORT>, or removed
+
+### D. SSH Commands
+- 1 SSH command with real Tailscale IP
+- Location: ops/GITHUB_STRATEGY.md
+- Action: Replaced with <BUILDER_USER>@<BUILDER_TAILSCALE_IP>
+
+### E. Internal Paths
+- 20+ VPS file paths (/root/..., /home/openclaw/...)
+- 1 local Windows path (C:\Users\james\...)
+- Locations: All 4 affected files
+- Action: Replaced with <PATH_REDACTED>, <LOCAL_PATH_REDACTED>, <BUILDER1_WORKSPACE>, <BUILDER2_WORKSPACE>
+
+### F. Service Details
+- systemctl output with PID numbers
+- Socket listener output
+- Config file paths
+- Token scope lists
+- Location: ops/triage/TRIAGE_REPORT.md, ops/proof-packs/PROOF_PACK.md
+- Action: Summarized functionally, details removed
+
+## Post-Redaction Verification
+- IPv4 addresses remaining: 0
+- Hostinger patterns remaining: 0
+- SSH commands remaining: 0
+- Localhost:port patterns remaining: 0
+- Internal paths remaining: 0
+- PID numbers remaining: 0
+- Token scopes remaining: 0
