@@ -57,20 +57,81 @@ jobs:
           echo "Signature files:"
           ls -la *.sig *.cert
 
-      - name: Verify signatures (self-test)
+      - name: Create provenance attestations (cosign attest-blob)
+        env:
+          TAG_NAME: ${{ steps.tag.outputs.TAG_NAME }}
+          GIT_SHA: ${{ github.sha }}
+          GIT_REF: ${{ github.ref }}
         run: |
           cd dist/bundles
+          BUNDLE_FILES="role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt"
+          for file in $BUNDLE_FILES; do
+            ASSET_SHA256=$(sha256sum "$file" | cut -d' ' -f1)
+            cat > "${file}.predicate.json" <<PRED
+          {
+            "repo": "LucraLab/openclaw-control",
+            "workflow": ".github/workflows/release-bundles.yml",
+            "git_sha": "${GIT_SHA}",
+            "ref": "${GIT_REF}",
+            "tag": "${TAG_NAME}",
+            "asset_name": "${file}",
+            "asset_sha256": "${ASSET_SHA256}",
+            "build_script": "scripts/build_bundles.js",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          PRED
+            echo "Attesting ${file}..."
+            cosign attest-blob --yes \
+              --predicate "${file}.predicate.json" \
+              --type "https://lucralab.com/bundle-provenance/v1" \
+              --bundle "${file}.att.json" \
+              "${file}"
+            echo "  -> ${file}.att.json created"
+            rm -f "${file}.predicate.json"
+          done
+          echo ""
+          echo "Attestation files:"
+          ls -la *.att.json
+
+      - name: Verify signatures — strict identity (self-test)
+        env:
+          TAG_NAME: ${{ steps.tag.outputs.TAG_NAME }}
+        run: |
+          cd dist/bundles
+          EXPECTED_IDENTITY="https://github.com/LucraLab/openclaw-control/.github/workflows/release-bundles.yml@refs/tags/${TAG_NAME}"
+          echo "Expected identity: ${EXPECTED_IDENTITY}"
+          echo ""
           for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
-            echo "Verifying ${file}..."
+            echo "Verifying signature: ${file}..."
             cosign verify-blob "${file}" \
               --signature "${file}.sig" \
               --certificate "${file}.cert" \
-              --certificate-identity-regexp "https://github.com/LucraLab/openclaw-control/.*" \
+              --certificate-identity "${EXPECTED_IDENTITY}" \
               --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
-            echo "  PASS"
+            echo "  SIGNATURE PASS"
           done
           echo ""
-          echo "All 5 assets verified."
+          echo "All 5 signature verifications passed (strict identity)."
+
+      - name: Verify attestations — strict identity (self-test)
+        env:
+          TAG_NAME: ${{ steps.tag.outputs.TAG_NAME }}
+        run: |
+          cd dist/bundles
+          EXPECTED_IDENTITY="https://github.com/LucraLab/openclaw-control/.github/workflows/release-bundles.yml@refs/tags/${TAG_NAME}"
+          for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            echo "Verifying attestation: ${file}..."
+            cosign verify-blob-attestation \
+              --bundle "${file}.att.json" \
+              --type "https://lucralab.com/bundle-provenance/v1" \
+              --certificate-identity "${EXPECTED_IDENTITY}" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              --check-claims \
+              "${file}"
+            echo "  ATTESTATION PASS"
+          done
+          echo ""
+          echo "All 5 attestation verifications passed (strict identity)."
 
       - name: Create GitHub Release
         env:
@@ -89,20 +150,34 @@ jobs:
           - \`context_bundle.json\` — Boot contract and platform metadata
           - \`SHA256SUMS.txt\` — Integrity checksums for all bundles
 
-          ## Signatures
-          Each bundle asset includes a \`.sig\` (signature) and \`.cert\` (certificate) file for cosign verification.
+          ## Signatures + Attestations
+          Each bundle asset includes:
+          - \`.sig\` / \`.cert\` — cosign keyless signature + certificate
+          - \`.att.json\` — cosign provenance attestation (DSSE bundle)
 
           ## Verification
           \`\`\`bash
+          TAG=\"$TAG\"
+          IDENTITY=\"https://github.com/LucraLab/openclaw-control/.github/workflows/release-bundles.yml@refs/tags/\${TAG}\"
+          ISSUER=\"https://token.actions.githubusercontent.com\"
+
+          # Signature verification (strict identity)
+          for f in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            cosign verify-blob \\\$f --signature \\\$f.sig --certificate \\\$f.cert \\\\
+              --certificate-identity \\\"\\\$IDENTITY\\\" \\\\
+              --certificate-oidc-issuer \\\"\\\$ISSUER\\\"
+          done
+
+          # Attestation verification
+          for f in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            cosign verify-blob-attestation --bundle \\\$f.att.json \\\\
+              --type https://lucralab.com/bundle-provenance/v1 \\\\
+              --certificate-identity \\\"\\\$IDENTITY\\\" \\\\
+              --certificate-oidc-issuer \\\"\\\$ISSUER\\\" \\\$f
+          done
+
           # Integrity check
           sha256sum -c SHA256SUMS.txt
-
-          # Authenticity check (requires cosign)
-          for f in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
-            cosign verify-blob \$f --signature \$f.sig --certificate \$f.cert \\
-              --certificate-identity-regexp 'https://github.com/LucraLab/openclaw-control/.*' \\
-              --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
-          done
           \`\`\`" \
             dist/bundles/role_registry.json \
             dist/bundles/tools_catalog.json \
@@ -110,27 +185,25 @@ jobs:
             dist/bundles/context_bundle.json \
             dist/bundles/SHA256SUMS.txt \
             dist/bundles/*.sig \
-            dist/bundles/*.cert
+            dist/bundles/*.cert \
+            dist/bundles/*.att.json
 
       - name: Summary
         run: |
           TAG="${{ steps.tag.outputs.TAG_NAME }}"
-          echo "## Signed Bundle Release: ${TAG}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Signed + Attested Bundle Release: ${TAG}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Asset | Signature | Certificate |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-------|-----------|-------------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Asset | Signature | Certificate | Attestation |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-----------|-------------|-------------|" >> "$GITHUB_STEP_SUMMARY"
           for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
-            echo "| ${file} | ${file}.sig | ${file}.cert |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ${file} | ${file}.sig | ${file}.cert | ${file}.att.json |" >> "$GITHUB_STEP_SUMMARY"
           done
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Bundle Assets" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Asset | Size |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-------|------|" >> "$GITHUB_STEP_SUMMARY"
-          for f in dist/bundles/*.json dist/bundles/SHA256SUMS.txt; do
-            name=$(basename "$f")
-            size=$(wc -c < "$f")
-            echo "| ${name} | ${size} bytes |" >> "$GITHUB_STEP_SUMMARY"
-          done
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Identity: \`https://github.com/LucraLab/openclaw-control/.github/workflows/release-bundles.yml\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "Issuer: \`https://token.actions.githubusercontent.com\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Verification Policy" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Constraint | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| OIDC Issuer | \`https://token.actions.githubusercontent.com\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Identity | \`...release-bundles.yml@refs/tags/${TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Repository | \`LucraLab/openclaw-control\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Ref | \`refs/tags/${TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Attestation Type | \`https://lucralab.com/bundle-provenance/v1\` |" >> "$GITHUB_STEP_SUMMARY"

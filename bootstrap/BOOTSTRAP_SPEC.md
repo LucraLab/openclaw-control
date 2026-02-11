@@ -41,38 +41,59 @@ gh release download <BUNDLE_TAG> --repo LucraLab/openclaw-control --dir ./bundle
 
 An agent MUST complete ALL of these steps in order. Failure at any step means the agent does NOT start (fail-closed).
 
-### Step 1 — Download Bundles + Signatures
+### Step 1 — Download Bundles + Signatures + Attestations
 
 ```
-Input: BUNDLE_TAG (e.g., registry@2026.02.11.4)
-Action: Download all bundle files AND their .sig/.cert signature files from GitHub Release
+Input: BUNDLE_TAG (e.g., registry@2026.02.11.5)
+Action: Download all bundle files, signatures, and attestations from GitHub Release
 Output: Local copies in /workspace/bundles/
   - 5 bundle files (4 JSON + SHA256SUMS.txt)
   - 10 signature files (5x .sig + 5x .cert)
+  - 5 attestation files (5x .att.json)
+Total: 20 files
 ```
 
-### Step 2 — Verify Authenticity (Cosign)
+### Step 2 — Verify Authenticity (Cosign Strict Identity)
 
 ```
-Action: For each bundle file, verify its cosign keyless signature:
+Action: For each bundle file, verify its cosign keyless signature with STRICT identity:
   cosign verify-blob <file> --signature <file>.sig --certificate <file>.cert \
-    --certificate-identity-regexp "https://github.com/LucraLab/openclaw-control/.*" \
+    --certificate-identity "https://github.com/LucraLab/openclaw-control/.github/workflows/release-bundles.yml@refs/tags/<BUNDLE_TAG>" \
     --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
-Pass: All 5 files verified against LucraLab/openclaw-control workflow identity
+Pass: All 5 files verified against exact workflow identity + tag ref
 Fail: Exit code 11, emit BOOTSTRAP_FAILED(reason=SIGNATURE_VERIFY_FAILED)
 ```
 
-This ensures bundles were produced by the official LucraLab GitHub Actions workflow, not just that they are unmodified.
+This ensures bundles were signed by the **exact** LucraLab release workflow for this **specific** tag, not just any workflow in the repo.
 
-### Step 3 — Verify Integrity (SHA256)
+### Step 3 — Verify Provenance (Cosign Attestation)
+
+```
+Action: For each bundle file, verify its provenance attestation:
+  cosign verify-blob-attestation --bundle <file>.att.json \
+    --type "https://lucralab.com/bundle-provenance/v1" \
+    --certificate-identity "https://github.com/LucraLab/openclaw-control/.github/workflows/release-bundles.yml@refs/tags/<BUNDLE_TAG>" \
+    --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+    --check-claims \
+    <file>
+Then parse attestation predicate and enforce:
+  - repo == "LucraLab/openclaw-control"
+  - workflow == ".github/workflows/release-bundles.yml"
+  - ref == "refs/tags/<BUNDLE_TAG>"
+  - asset_sha256 matches computed SHA of downloaded file
+Pass: All 5 attestations verified with correct provenance
+Fail: Exit code 12, emit BOOTSTRAP_FAILED(reason=ATTESTATION_VERIFY_FAILED)
+```
+
+### Step 4 — Verify Integrity (SHA256)
 
 ```
 Action: Run sha256sum -c SHA256SUMS.txt
 Pass: All checksums match
-Fail: Exit non-zero, emit BOOTSTRAP_FAILED event
+Fail: Exit code 3, emit BOOTSTRAP_FAILED event
 ```
 
-### Step 4 — Load Role Policy
+### Step 5 — Load Role Policy
 
 ```
 Action: Parse role_registry.json
@@ -80,7 +101,7 @@ Confirm: AGENT_ROLE exists in roles object
 Fail: Exit non-zero (role not found = misconfigured agent)
 ```
 
-### Step 5 — Validate Capabilities
+### Step 6 — Validate Capabilities
 
 ```
 Action: Parse policy_bundle.json
@@ -89,7 +110,7 @@ Confirm: No forbidden combinations violated
 Fail: Exit non-zero, emit CAPABILITY_DENIED event
 ```
 
-### Step 6 — Load Tools
+### Step 7 — Load Tools
 
 ```
 Action: Parse tools_catalog.json
@@ -97,7 +118,7 @@ Filter: Only tools allowed for AGENT_ROLE
 Output: Available tool set for this session
 ```
 
-### Step 7 — Register in Ledger
+### Step 8 — Register in Ledger
 
 ```
 Action: POST to ledger /agents endpoint
@@ -106,7 +127,7 @@ Pass: 2xx response with agent_id
 Fail: Retry once, then exit non-zero
 ```
 
-### Step 8 — Subscribe to Events
+### Step 9 — Subscribe to Events
 
 ```
 Action: Subscribe to events defined in role's event_subscriptions
@@ -114,7 +135,7 @@ Pass: Subscription confirmed
 Fail: Log warning (non-fatal, agent can still operate)
 ```
 
-### Step 9 — Emit READY
+### Step 10 — Emit READY
 
 ```
 Action: POST to event bus
@@ -122,12 +143,45 @@ Event: { type: "AGENT_READY", agent_name, role, bundle_tag, timestamp }
 This signals to the platform that the agent is operational.
 ```
 
-### Step 10 — Start Main Process
+### Step 11 — Start Main Process
 
 ```
 Action: Hand off to the agent's main application logic
 The agent is now "born fully formed" with its role, tools, and context.
 ```
+
+## Strict Verification Policy
+
+All bundle verification uses **exact identity matching** — not wildcards or regexps.
+
+### Identity Constraints
+
+| Constraint | Required Value |
+|------------|---------------|
+| OIDC Issuer | `https://token.actions.githubusercontent.com` |
+| Certificate Identity | `https://github.com/LucraLab/openclaw-control/.github/workflows/release-bundles.yml@refs/tags/<BUNDLE_TAG>` |
+| Attestation Type | `https://lucralab.com/bundle-provenance/v1` |
+
+The certificate identity includes the **exact tag ref**, so bundles signed for one tag cannot be replayed for another.
+
+### Verification Order
+
+1. **Signature** (exit 11) — proves the exact LucraLab workflow signed this file for this tag
+2. **Attestation** (exit 12) — proves build provenance: repo, workflow, git SHA, ref, asset hash
+3. **SHA256** (exit 3) — proves file integrity against checksums
+
+Each step gates the next. If signature fails, attestation and SHA256 are not attempted. This is fail-closed by design.
+
+### Attestation Predicate Fields
+
+| Field | Description |
+|-------|-------------|
+| `repo` | Must be `LucraLab/openclaw-control` |
+| `workflow` | Must be `.github/workflows/release-bundles.yml` |
+| `ref` | Must match `refs/tags/<BUNDLE_TAG>` |
+| `asset_sha256` | Must match computed SHA256 of downloaded file |
+| `git_sha` | Commit SHA that produced the bundle |
+| `tag` | Tag name (e.g., `registry@2026.02.11.5`) |
 
 ## Environment Variables
 
