@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Compiled Role Registry Bundle",
+  "description": "Machine-readable role registry compiled from ROLE_REGISTRY.yaml",
+  "type": "object",
+  "required": ["version", "generated", "platform", "roles", "agents"],
+  "properties": {
+    "version": { "type": "string" },
+    "generated": { "type": "string", "format": "date-time" },
+    "platform": { "type": "string" },
+    "bundle_tag": { "type": "string" },
+    "source_sha": { "type": "string" },
+    "roles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["purpose", "allowed_tools", "hard_limits"],
+        "properties": {
+          "purpose": { "type": "string" },
+          "responsibilities": { "type": "array", "items": { "type": "string" } },
+          "allowed_tools": { "type": "array", "items": { "type": "string" } },
+          "hard_limits": { "type": "array", "items": { "type": "string" } },
+          "event_subscriptions": { "type": "array", "items": { "type": "string" } },
+          "default_work_queues": { "type": "array", "items": { "type": "string" } },
+          "status": { "type": "string" },
+          "priority": { "type": "string" }
+        }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["agent_id", "gateway", "assigned_roles"],
+        "properties": {
+          "agent_id": { "type": "string" },
+          "gateway": { "type": "string" },
+          "assigned_roles": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

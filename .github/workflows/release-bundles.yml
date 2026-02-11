@@ -1,0 +1,75 @@
+name: Build and Release Bundles
+on:
+  push:
+    tags:
+      - 'registry@*'
+      - 'bootstrap@*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Extract tag name
+        id: tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build bundles
+        run: node scripts/build_bundles.js --tag "${{ steps.tag.outputs.TAG_NAME }}" --outdir dist/bundles
+
+      - name: Verify SHA256SUMS exists
+        run: |
+          test -f dist/bundles/SHA256SUMS.txt || { echo "ERROR: SHA256SUMS.txt not generated"; exit 1; }
+          echo "SHA256SUMS.txt contents:"
+          cat dist/bundles/SHA256SUMS.txt
+          echo ""
+          echo "Verifying checksums..."
+          cd dist/bundles && sha256sum -c SHA256SUMS.txt
+          echo "All checksums verified."
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.tag.outputs.TAG_NAME }}"
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "Release $TAG" \
+            --notes "Automated bundle release for tag \`$TAG\`.
+
+          ## Bundle Contents
+          - \`role_registry.json\` — Compiled roles and agent assignments
+          - \`tools_catalog.json\` — Tool inventory with role mappings
+          - \`policy_bundle.json\` — Capability rules and gating policies
+          - \`context_bundle.json\` — Boot contract and platform metadata
+          - \`SHA256SUMS.txt\` — Integrity checksums for all bundles
+
+          ## Verification
+          \`\`\`bash
+          sha256sum -c SHA256SUMS.txt
+          \`\`\`" \
+            dist/bundles/role_registry.json \
+            dist/bundles/tools_catalog.json \
+            dist/bundles/policy_bundle.json \
+            dist/bundles/context_bundle.json \
+            dist/bundles/SHA256SUMS.txt
+
+      - name: Summary
+        run: |
+          echo "## Bundle Release: ${{ steps.tag.outputs.TAG_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Asset | Size |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|------|" >> "$GITHUB_STEP_SUMMARY"
+          for f in dist/bundles/*.json dist/bundles/SHA256SUMS.txt; do
+            name=$(basename "$f")
+            size=$(wc -c < "$f")
+            echo "| $name | ${size} bytes |" >> "$GITHUB_STEP_SUMMARY"
+          done

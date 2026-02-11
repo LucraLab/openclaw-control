@@ -21,6 +21,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Build output
+dist/
+
 # Editor
 .vscode/
 .idea/
