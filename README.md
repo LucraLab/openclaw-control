@@ -33,3 +33,5 @@ Canonical governance and control-plane repository for the OpenClaw multi-agent p
 
 - `LucraLab/lucralab-ai-sdr-platform` — AI SDR application
 - `mcdonjam82/LucraLab-lead-nurture-workflow` — Lead nurture system
+
+<\!-- CI smoketest -->
