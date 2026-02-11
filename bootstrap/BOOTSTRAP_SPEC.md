@@ -127,6 +127,7 @@ The orchestrator provides these to each agent container:
 | `LEDGER_URL` | `http://ledger:9900` | Yes |
 | `EVENT_BUS_URL` | `http://ledger:9900` | Yes |
 | `RUN_ID` | `run-20260211-001` | Yes |
+| `CAP_TOKEN` | `cap-xxxx` | No (reserved for future privileged capability gating) |
 
 ## Workspace Layout
 
@@ -134,23 +135,56 @@ Each agent gets an isolated workspace:
 
 ```
 /workspace/
-  bundles/       # Downloaded bundle files
+  bundles/       # Downloaded bundle files (per BUNDLE_TAG)
   repo/          # Code checkout (if applicable)
   artifacts/     # Build outputs
   logs/          # Agent logs
   tmp/           # Temporary files
+  cache/         # Cached data (optional)
+  MANIFEST.json  # Agent metadata (auto-maintained)
 ```
 
 On the host, this maps to:
 
 ```
 /home/openclaw/workspaces/<agent_name>/
-  bundles/
-  repo/
-  artifacts/
-  logs/
-  tmp/
 ```
+
+Permissions: owner `openclaw`, mode `700` (agent-isolated).
+
+## Workspace Isolation (NO SHARED STATE)
+
+Workspaces are NOT shared state between agents. This rule is enforced at multiple levels:
+
+1. **Mount isolation**: The orchestrator MUST only mount `/home/openclaw/workspaces/$AGENT_NAME` as `/workspace`. No other agent workspace may be mounted.
+2. **Runtime check**: At bootstrap, the agent verifies `/proc/mounts` contains no foreign workspace mounts. Violation emits `WORKSPACE_CROSS_ACCESS_DENIED` and exits with code 9.
+3. **Cross-agent coordination**: All coordination between agents MUST go through the ledger/event bus or an explicitly designated shared store with access controls.
+4. **MANIFEST.json**: Each workspace contains a manifest tracking agent_name, role, bundle_tag, run_id, timestamps, and disk usage. The bootstrap script maintains this automatically.
+
+## Secret-Write Guard
+
+Agents MUST NOT write secrets into their workspace. The `safe-write.sh` guard enforces:
+
+**Blocked filenames**: `.env`, `.env.*`, `*.pem`, `*.key`, `*service_account*`, `*credential*`, `*private_key*`
+
+**Blocked content**: Any file containing `BEGIN PRIVATE KEY`
+
+Violations emit `WORKSPACE_SECRET_WRITE_BLOCKED` and return non-zero (but do not crash unrelated services).
+
+The bootstrap script exports `SAFE_WRITE` pointing to the guard script.
+
+## Cleanup Policy
+
+A daily cleanup job enforces safe retention limits:
+
+| Directory | Retention |
+|-----------|-----------|
+| `tmp/` | Delete files older than 7 days |
+| `logs/` | Keep last 7 days or cap at 200 MB per agent |
+| `bundles/` | Keep last 3 bundle tag directories |
+| `cache/` | Delete files older than 30 days |
+
+The cleanup job only touches `/home/openclaw/workspaces/*`, never follows symlinks outside that tree, and supports `--dry-run` mode.
 
 ## Fail-Closed Guarantee
 

@@ -338,7 +338,15 @@ function main() {
       capability_token: 'A token granting specific tool access for a role',
       ledger: 'Central registry of active agents and their states',
       event_bus: 'Pub/sub system for inter-agent communication',
-      workspace: 'Isolated directory per agent: /workspace in container, /home/openclaw/workspaces/<name> on host',
+      workspace: 'Isolated directory per agent: /workspace in container',
+      manifest: 'MANIFEST.json in each workspace root tracking agent metadata',
+    },
+    workspace_rules: {
+      isolation: 'Workspaces are NOT shared state. Each agent may ONLY access its own workspace.',
+      cross_access: 'Mounting or reading another agent workspace is forbidden. Violations emit WORKSPACE_CROSS_ACCESS_DENIED.',
+      coordination: 'Cross-agent coordination MUST use the ledger/event bus or an explicit shared store, never workspace files.',
+      secret_guard: 'Writing secrets (.env, .pem, .key, private keys) into workspaces is blocked by safe-write guard.',
+      cleanup: 'tmp/ cleaned after 7 days, logs/ capped at 7 days, bundles/ keeps last 3 tags, cache/ cleaned after 30 days.',
     },
     bundle_contents: [
       'role_registry.json',
@@ -372,6 +380,41 @@ function main() {
   const sumsContent = sums.join('\n') + '\n';
   fs.writeFileSync(path.join(outdir, 'SHA256SUMS.txt'), sumsContent);
   console.log(`  SHA256SUMS.txt (${sums.length} entries)`);
+
+  // --- Public-safe scan (MANDATORY) ---
+  console.log('\nRunning public-safe scan on bundle outputs...');
+  const FORBIDDEN_PATTERNS = [
+    { re: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/, label: 'IPv4 address' },
+    { re: /\b[0-9a-fA-F]{1,4}(:[0-9a-fA-F]{1,4}){7}\b/, label: 'IPv6 address' },
+    { re: /srv\d+\.hstgr\.cloud/i, label: 'Hostinger hostname' },
+    { re: /hstgr\.cloud/i, label: 'hstgr.cloud pattern' },
+    { re: /ssh\s+\w+@[\w.-]+/i, label: 'SSH command' },
+    { re: /\b(ghp_|sk-|AKIA|xoxb-)\w+/, label: 'API key pattern' },
+    { re: /BEGIN\s+(RSA\s+)?PRIVATE\s+KEY/, label: 'Private key block' },
+    { re: /\/home\/\w+\//, label: 'Real filesystem path (/home/)' },
+    { re: /\/root\//, label: 'Real filesystem path (/root/)' },
+    { re: /\/var\/www\//, label: 'Real filesystem path (/var/www/)' },
+    { re: /C:\\Users\\/i, label: 'Windows path' },
+    { re: /127\.0\.0\.1:\d{4,5}/, label: 'Localhost with port' },
+  ];
+
+  let scanFails = 0;
+  for (const [filename, data] of Object.entries(files)) {
+    const content = JSON.stringify(data);
+    for (const { re, label } of FORBIDDEN_PATTERNS) {
+      const match = content.match(re);
+      if (match) {
+        console.error(`  FAIL: ${filename} contains ${label}: "${match[0].substring(0, 30)}..."`);
+        scanFails++;
+      }
+    }
+  }
+  if (scanFails > 0) {
+    console.error(`\nPUBLIC-SAFE SCAN FAILED: ${scanFails} violation(s) found in bundle outputs.`);
+    console.error('Bundles must NOT contain infrastructure details. Redact before building.');
+    process.exit(2);
+  }
+  console.log('  Public-safe scan: PASS (0 violations)');
 
   console.log(`\nBundle build complete: ${Object.keys(files).length + 1} files in ${outdir}`);
 
