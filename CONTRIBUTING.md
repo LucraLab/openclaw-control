@@ -4,7 +4,7 @@ This is a **PUBLIC** repository. All content is visible to the internet. Follow 
 
 ## Public-Safe Rules
 
-### Never include:
+### Never include
 - Real IP addresses (IPv4 or IPv6)
 - Hostnames or domain names of internal servers
 - SSH commands to real hosts (`ssh user@host`)
@@ -16,7 +16,7 @@ This is a **PUBLIC** repository. All content is visible to the internet. Follow 
 - PID numbers, process IDs, or systemctl output with identifying details
 - GitHub token scopes or authentication details
 
-### Use placeholders instead:
+### Use placeholders instead
 | Sensitive Value | Placeholder |
 |----------------|-------------|
 | Dashboard VPS IP | `<DASHBOARD_VPS_IPV4>` |
@@ -32,7 +32,7 @@ This is a **PUBLIC** repository. All content is visible to the internet. Follow 
 | Credentials | `REDACTED` |
 | Token scopes | `<SCOPES_REDACTED>` |
 
-### What IS safe to include:
+### What IS safe to include
 - Role definitions and capability lists
 - Agent names and assignments
 - Architecture descriptions (without network topology)
