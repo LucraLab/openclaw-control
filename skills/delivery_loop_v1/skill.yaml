@@ -1,0 +1,104 @@
+name: delivery_loop_v1
+version: "1.0.0"
+description: >-
+  Fail-closed delivery loop that ships changes end-to-end through
+  objective intake, branch creation, PR, CI gates, QA approval,
+  merge, staging smoke, and objective completion.
+
+# Scope constraints
+allowed_repos:
+  - LucraLab/openclaw-control
+
+# Forbidden operations — skill MUST refuse these
+forbidden_ops:
+  - outbound_comms
+  - production_deploy
+  - firewall_change
+  - secret_rotation
+  - workflow_modification
+  - binary_commit
+  - dependency_addition
+  - force_push
+
+# Required CI gates that must pass before merge
+required_gates:
+  - scan-secrets
+  - scan-public-safe
+  - qa-gate
+
+# Required approvals
+required_approvals:
+  codeowners_review: true
+  qa_label: qa-approved
+  min_approving_reviews: 1
+
+# Risk tiers and their requirements
+risk_tiers:
+  low:
+    auto_merge: false
+    approvals_required: 1
+    staging_smoke: true
+  medium:
+    auto_merge: false
+    approvals_required: 1
+    staging_smoke: true
+    manual_review_notes: true
+  high:
+    auto_merge: false
+    approvals_required: 2
+    staging_smoke: true
+    manual_review_notes: true
+    explicit_approval_required: true
+
+# Commands provided by this skill
+commands:
+  objective_create:
+    script: scripts/objective_create.sh
+    description: Create a new objective in the Delivery OS
+    flags:
+      --type: Objective template type (required)
+      --repo: Target repository (required, must be in allowlist)
+      --title: Objective title (required)
+      --risk: Risk tier - low/medium/high (required)
+      --dry-run: Print record without writing
+  delivery_loop:
+    script: scripts/delivery_loop.sh
+    description: Execute delivery loop steps for a task
+    flags:
+      --objective: Objective ID (required)
+      --task: Task key (required)
+      --repo: Target repository (required)
+      --dry-run: Simulate without making changes
+      --once: Run one cycle only
+      --close-check: Check if objective can be closed
+  task_pr_sync:
+    script: scripts/task_pr_sync.sh
+    description: Sync task state with PR events
+    flags:
+      --objective: Objective ID (required)
+      --tasks-file: Path to tasks JSON file (required)
+      --dry-run: Report state without writing changes
+  staging_smoke:
+    script: scripts/staging_smoke.sh
+    description: Run staging smoke tests
+    flags:
+      --repo-dir: Path to cloned repo (required)
+      --dry-run: Report checks without writing results
+
+# Event types emitted
+events:
+  - DELIVERY_OBJECTIVE_CREATED
+  - DELIVERY_BRANCH_CREATED
+  - DELIVERY_PR_OPENED
+  - DELIVERY_CI_PASSED
+  - DELIVERY_CI_FAILED
+  - DELIVERY_QA_APPROVED
+  - DELIVERY_PR_MERGED
+  - DELIVERY_STAGING_SMOKE_PASS
+  - DELIVERY_STAGING_SMOKE_FAIL
+  - DELIVERY_OBJECTIVE_COMPLETE
+  - DELIVERY_OBJECTIVE_FAILED
+  - DELIVERY_REFUSED
+
+# Rollback reference
+rollback_doc: skills/delivery_loop_v1/runbook.md
