@@ -1,0 +1,617 @@
+# ROLE_REGISTRY.yaml — Canonical Merged Registry
+# OpenClaw Multi-Agent Platform + Dashboard VPS Infrastructure
+# Version: 1.1.0
+# Generated: 2026-02-11T00:00:00Z
+# Sources:
+#   - Builder VPS: /home/openclaw/.openclaw/proofs/org_discovery_20260210T221708Z/ROLE_REGISTRY_V1.yaml
+#   - Dashboard VPS: /root/proofs/org_discovery_dashboard_20260210T223433Z/DASHBOARD_ROLE_REGISTRY_V1.yaml
+#
+# This is the CANONICAL role registry. Both VPS-specific registries
+# are superseded by this merged version.
+
+---
+registry_version: "1.1.0"
+generated: "2026-02-11T00:00:00Z"
+platform: "LucraLab / OpenClaw Multi-Agent Platform"
+hosts:
+  dashboard:
+    hostname: Dashboard.LucraLab
+    ip: 31.97.106.33
+    tailscale: 100.83.32.96
+    role: Orchestrator + Application Host
+  builder:
+    hostname: srv1349469
+    ip: 187.77.6.191
+    tailscale: 100.75.216.57
+    role: Agent Execution Environment
+
+# ============================================================
+# SOFTWARE COMPANY ROLES (10 roles)
+# ============================================================
+# These map to "what a real software company needs."
+# Agents on the Builder VPS are assigned to these roles.
+
+roles:
+
+  # ----------------------------------------------------------
+  product_lead:
+    purpose: >
+      Owns the product backlog. Prioritizes features, defines acceptance
+      criteria, and decides what gets built next. Single source of truth
+      for "what" and "why".
+    responsibilities:
+      - Maintain prioritized backlog (features, bugs, tech debt)
+      - Write user stories with clear acceptance criteria
+      - Triage incoming requests and classify urgency
+      - Approve or reject feature proposals from other agents
+      - Track progress toward milestones and deadlines
+      - Communicate priorities to delivery_manager
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - sessions_send
+      - sessions_list
+      - web_search
+      - web_fetch
+    event_subscriptions:
+      - feature_request_submitted
+      - bug_report_filed
+      - milestone_reached
+      - sprint_review_complete
+    default_work_queues:
+      - backlog_triage
+      - feature_review
+      - milestone_tracking
+    hard_limits:
+      - NEVER execute shell commands
+      - NEVER modify infrastructure configs
+      - NEVER access secrets or credentials
+      - NEVER deploy code
+      - NEVER approve own feature requests
+    current_agents: []
+    status: UNASSIGNED
+    priority: HIGH
+
+  # ----------------------------------------------------------
+  delivery_manager:
+    purpose: >
+      Coordinates execution across agents. Breaks work into tasks,
+      assigns to builders, tracks progress, removes blockers. Owns
+      "how" and "when".
+    responsibilities:
+      - Break features into implementable tasks
+      - Assign tasks to builder agents
+      - Track task status and resolve blockers
+      - Run standups (periodic status collection from agents)
+      - Escalate blocked work to product_lead
+      - Coordinate cross-agent dependencies
+      - Maintain sprint/iteration cadence
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - sessions_send
+      - sessions_list
+      - sessions_history
+      - exec
+      - cron
+    event_subscriptions:
+      - task_assigned
+      - task_completed
+      - task_blocked
+      - build_failed
+      - deployment_requested
+    default_work_queues:
+      - task_coordination
+      - blocker_resolution
+      - standup_collection
+    hard_limits:
+      - NEVER write production code (delegate to builders)
+      - NEVER modify security policies
+      - NEVER access secrets directly
+      - NEVER deploy without qa_gatekeeper approval
+    current_agents: []
+    status: UNASSIGNED
+    priority: HIGH
+    notes: "Dude (Dashboard VPS) partially fills this role via dispatch but lacks persistent state."
+
+  # ----------------------------------------------------------
+  architect:
+    purpose: >
+      Designs system architecture. Reviews technical approaches,
+      defines patterns, ensures consistency. Produces ADRs and
+      design documents. Never writes implementation code.
+    responsibilities:
+      - Create and maintain architecture decision records (ADRs)
+      - Review proposed technical approaches before implementation
+      - Define code patterns, naming conventions, API contracts
+      - Identify technical debt and propose remediation plans
+      - Evaluate technology choices (libraries, services, protocols)
+      - Ensure cross-agent consistency in design
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - sessions_send
+      - sessions_list
+      - web_search
+      - web_fetch
+      - exec
+    event_subscriptions:
+      - design_review_requested
+      - technology_evaluation_needed
+      - cross_agent_dependency_detected
+      - architecture_drift_detected
+    default_work_queues:
+      - design_review
+      - adr_creation
+      - tech_debt_assessment
+    hard_limits:
+      - NEVER write implementation code (design only)
+      - NEVER deploy or restart services
+      - NEVER modify configs without security_auditor review
+      - NEVER access secrets or credentials
+    current_agents: []
+    status: UNASSIGNED
+    priority: HIGH
+
+  # ----------------------------------------------------------
+  fullstack_builder:
+    purpose: >
+      Implements features end-to-end. Writes code, tests, and docs
+      for assigned tasks. Primary code-producing role.
+    responsibilities:
+      - Implement features from task specs
+      - Write unit and integration tests
+      - Follow architect-defined patterns
+      - Create pull requests with clear descriptions
+      - Fix bugs assigned by delivery_manager
+      - Update inline documentation
+      - Respond to code review feedback
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - exec
+      - web_search
+      - web_fetch
+      - sessions_send
+      - browser
+    event_subscriptions:
+      - task_assigned
+      - code_review_feedback
+      - build_failed
+      - test_failed
+    default_work_queues:
+      - feature_implementation
+      - bug_fixes
+      - code_review_response
+    hard_limits:
+      - NEVER deploy to production (delegate to deployment pipeline)
+      - NEVER modify security policies or firewall rules
+      - NEVER access production secrets
+      - NEVER push to main without qa_gatekeeper approval
+      - NEVER modify other agents' workspaces
+    current_agents:
+      - agent_id: main
+        gateway: builder1
+        notes: "General-purpose builder"
+      - agent_id: main
+        gateway: builder2
+        notes: "General-purpose builder for Builder2"
+    status: PARTIALLY_ASSIGNED
+
+  # ----------------------------------------------------------
+  integration_builder:
+    purpose: >
+      Specializes in API integrations, webhooks, and external
+      service connections. Handles GoHighLevel, Synthflow, Twilio,
+      and similar platform work.
+    responsibilities:
+      - Implement API integrations with external services
+      - Build and maintain webhook handlers
+      - Create adapter layers for platform-specific APIs
+      - Handle OAuth flows and credential management
+      - Write integration tests with mock/sandbox endpoints
+      - Document API contracts and rate limits
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - exec
+      - web_search
+      - web_fetch
+      - sessions_send
+    event_subscriptions:
+      - integration_task_assigned
+      - webhook_failure_detected
+      - api_rate_limit_hit
+      - credential_rotation_needed
+    default_work_queues:
+      - api_integration
+      - webhook_maintenance
+      - credential_rotation
+    hard_limits:
+      - NEVER store credentials in code (use vault)
+      - NEVER call production APIs without sandbox testing first
+      - NEVER expose internal endpoints externally
+      - NEVER bypass rate limiting
+    current_agents: []
+    status: UNASSIGNED
+    priority: MEDIUM
+    notes: "API integrations currently handled by general builders."
+
+  # ----------------------------------------------------------
+  platform_builder:
+    purpose: >
+      Manages infrastructure: systemd services, LiteLLM config,
+      Redis, networking, monitoring. The "DevOps" agent.
+    responsibilities:
+      - Maintain systemd service files and drop-ins
+      - Configure and tune LiteLLM proxy
+      - Manage Redis configuration and monitoring
+      - Set up and maintain Tailscale networking
+      - Create and update monitoring scripts (canary, health checks)
+      - Handle certificate management and TLS
+      - Manage log rotation and disk cleanup
+      - Create and test backup procedures
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - exec
+      - cron
+      - sessions_send
+    event_subscriptions:
+      - service_health_degraded
+      - disk_usage_high
+      - certificate_expiring
+      - budget_threshold_reached
+      - canary_failure
+    default_work_queues:
+      - infrastructure_maintenance
+      - monitoring_setup
+      - incident_response
+    hard_limits:
+      - NEVER modify firewall rules without security_auditor approval
+      - NEVER restart production gateways without delivery_manager notice
+      - NEVER expose internal ports publicly
+      - NEVER print or log secrets
+      - MUST create backup before any config change
+    current_agents:
+      - agent_id: ops-1
+        gateway: builder1
+        notes: "Monitors Builder2. Health scans, performance reviews."
+      - agent_id: ops-2
+        gateway: builder2
+        notes: "Reciprocal monitor for Builder1."
+    status: PARTIALLY_ASSIGNED
+
+  # ----------------------------------------------------------
+  qa_gatekeeper:
+    purpose: >
+      Guards quality. Runs tests, reviews code for security/perf
+      issues, gates deployments. Nothing ships without QA sign-off.
+    responsibilities:
+      - Run automated test suites before deployment approval
+      - Review code changes for security vulnerabilities
+      - Check for performance regressions
+      - Verify compliance requirements (TCPA, data handling)
+      - Maintain test infrastructure and fixtures
+      - Write and maintain smoke tests
+      - Gate deployments (approve/reject based on test results)
+      - Track test coverage trends
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - exec
+      - browser
+      - web_fetch
+      - sessions_send
+    event_subscriptions:
+      - deployment_approval_requested
+      - code_review_requested
+      - test_suite_failed
+      - security_scan_completed
+      - regression_detected
+    default_work_queues:
+      - deployment_gate
+      - code_review
+      - test_maintenance
+    hard_limits:
+      - NEVER write feature code (test code only)
+      - NEVER approve own changes
+      - NEVER skip tests to meet deadlines
+      - NEVER access production secrets
+      - MUST fail-closed (reject if uncertain)
+    current_agents: []
+    status: UNASSIGNED
+    priority: CRITICAL
+    notes: "No automated quality gate exists. Code ships without test verification."
+
+  # ----------------------------------------------------------
+  security_auditor:
+    purpose: >
+      Continuous security monitoring. Reviews configs, scans for
+      vulnerabilities, audits access patterns, enforces policies.
+    responsibilities:
+      - Audit systemd service files and permissions
+      - Scan for exposed secrets in code and configs
+      - Review network exposure (ports, firewall, Tailscale ACLs)
+      - Monitor credential rotation schedules
+      - Review agent tool permissions for least-privilege
+      - Validate budget caps and spending limits
+      - Produce periodic security assessment reports
+      - Review and approve infrastructure changes
+    allowed_tools:
+      - read
+      - exec
+      - sessions_send
+      - sessions_list
+      - web_search
+    event_subscriptions:
+      - config_changed
+      - new_agent_registered
+      - credential_accessed
+      - firewall_rule_changed
+      - budget_cap_exceeded
+      - weekly_audit_trigger
+    default_work_queues:
+      - security_audit
+      - config_review
+      - incident_investigation
+    hard_limits:
+      - NEVER modify configs (audit only, recommend changes)
+      - NEVER access secret VALUES (only verify they exist and are protected)
+      - NEVER disable security controls
+      - NEVER approve own audit findings as resolved
+      - MUST report all critical findings within 1 hour
+    current_agents: []
+    status: UNASSIGNED
+    priority: HIGH
+    notes: "Weekly audit service exists but no persistent agent. Gap between audits."
+
+  # ----------------------------------------------------------
+  technical_writer:
+    purpose: >
+      Maintains documentation. API docs, runbooks, onboarding
+      guides, architecture diagrams, and changelogs.
+    responsibilities:
+      - Write and maintain API documentation
+      - Create operational runbooks for common tasks
+      - Document architecture decisions and system behavior
+      - Maintain onboarding guides for new agents
+      - Generate changelogs from commit history
+      - Keep README files current
+      - Document incident post-mortems
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - web_search
+      - web_fetch
+      - sessions_send
+      - sessions_list
+      - sessions_history
+    event_subscriptions:
+      - feature_deployed
+      - architecture_changed
+      - incident_resolved
+      - new_agent_onboarded
+    default_work_queues:
+      - documentation_updates
+      - runbook_creation
+      - changelog_generation
+    hard_limits:
+      - NEVER execute shell commands
+      - NEVER modify code or configs
+      - NEVER access secrets
+      - NEVER deploy anything
+    current_agents: []
+    status: UNASSIGNED
+    priority: MEDIUM
+
+  # ----------------------------------------------------------
+  insights_analyst:
+    purpose: >
+      Analyzes data, produces reports, identifies trends. Turns
+      raw metrics into actionable intelligence.
+    responsibilities:
+      - Analyze agent performance metrics (response times, error rates)
+      - Track LLM token usage and cost trends
+      - Produce weekly business intelligence reports
+      - Identify anomalies in system behavior
+      - Forecast resource needs (budget, compute, storage)
+      - Correlate events across agents for pattern detection
+    allowed_tools:
+      - read
+      - write
+      - edit
+      - exec
+      - web_search
+      - web_fetch
+      - sessions_send
+    event_subscriptions:
+      - daily_metrics_collected
+      - budget_threshold_reached
+      - anomaly_detected
+      - weekly_report_trigger
+    default_work_queues:
+      - metric_analysis
+      - report_generation
+      - anomaly_investigation
+    hard_limits:
+      - NEVER modify data sources (read-only analysis)
+      - NEVER access raw secrets
+      - NEVER deploy or restart services
+      - NEVER make operational decisions (recommend only)
+    current_agents:
+      - agent_id: finance
+        gateway: builder1
+        notes: "Business financial tracking. Partial match."
+      - agent_id: insights
+        gateway: builder2
+        notes: "Data analysis and business intelligence."
+    status: PARTIALLY_ASSIGNED
+
+# ============================================================
+# AGENT → ROLE MAPPING (Complete Inventory)
+# ============================================================
+
+all_agents:
+  # Builder1 (openclaw, uid 1001, port 8080)
+  builder1_main:
+    agent_id: main
+    gateway: builder1
+    emoji: lobster
+    workspace: /home/openclaw/builder
+    assigned_roles: [fullstack_builder]
+    notes: "Primary code builder."
+
+  builder1_vault:
+    agent_id: vault
+    gateway: builder1
+    emoji: lock
+    workspace: /home/openclaw/builder/agents/vault
+    assigned_roles: []
+    notes: "Secrets manager. Specialized utility, not a dev team role."
+
+  builder1_finance:
+    agent_id: finance
+    gateway: builder1
+    emoji: moneybag
+    workspace: /home/openclaw/builder/agents/finance
+    assigned_roles: [insights_analyst]
+    notes: "Business financial tracking. Partial match to insights_analyst."
+
+  builder1_scrooge:
+    agent_id: scrooge
+    gateway: builder1
+    emoji: money-wings
+    workspace: /home/openclaw/builder/agents/scrooge
+    assigned_roles: []
+    notes: "Personal spending tracker. Not a dev team role."
+
+  builder1_ops1:
+    agent_id: ops-1
+    gateway: builder1
+    emoji: wrench
+    workspace: /home/openclaw/builder/agents/ops-1
+    assigned_roles: [platform_builder]
+    notes: "Monitors Builder2. Health scans, performance reviews, security audits."
+
+  # Builder2 (openclaw2, uid 1002, port 8082)
+  builder2_main:
+    agent_id: main
+    gateway: builder2
+    workspace: /home/openclaw2/builder
+    assigned_roles: [fullstack_builder]
+    notes: "General-purpose builder for Builder2."
+
+  builder2_pa:
+    agent_id: pa
+    gateway: builder2
+    workspace: /home/openclaw2/builder/agents/pa
+    assigned_roles: []
+    notes: "Personal assistant. Not a dev team role."
+
+  builder2_sales:
+    agent_id: sales
+    gateway: builder2
+    workspace: /home/openclaw2/builder/agents/sales
+    assigned_roles: []
+    notes: "Sales pipeline. Not a dev team role."
+
+  builder2_cs:
+    agent_id: cs
+    gateway: builder2
+    workspace: /home/openclaw2/builder/agents/cs
+    assigned_roles: []
+    notes: "Customer support. Not a dev team role."
+
+  builder2_rental:
+    agent_id: rental
+    gateway: builder2
+    workspace: /home/openclaw2/builder/agents/rental
+    assigned_roles: []
+    notes: "Rental property management. Not a dev team role."
+
+  builder2_insights:
+    agent_id: insights
+    gateway: builder2
+    workspace: /home/openclaw2/builder/agents/insights
+    assigned_roles: [insights_analyst]
+    notes: "Data analysis and business intelligence."
+
+  builder2_crystal_pa:
+    agent_id: crystal-pa
+    gateway: builder2
+    workspace: /home/openclaw2/builder/agents/crystal-pa
+    assigned_roles: []
+    notes: "Enhanced personal assistant. Not a dev team role."
+
+  builder2_ops2:
+    agent_id: ops-2
+    gateway: builder2
+    workspace: /home/openclaw2/builder/agents/ops-2
+    assigned_roles: [platform_builder]
+    notes: "Reciprocal monitor for Builder1."
+
+# ============================================================
+# ROLE COVERAGE SUMMARY
+# ============================================================
+
+coverage_summary:
+  total_roles: 10
+  fully_assigned: 0
+  partially_assigned: 3
+  unassigned: 7
+
+  assigned_roles:
+    - role: fullstack_builder
+      agents: [builder1_main, builder2_main]
+      coverage: "2 general builders. No specialization."
+
+    - role: platform_builder
+      agents: [builder1_ops1, builder2_ops2]
+      coverage: "2 ops agents. Cross-monitoring only, no proactive infra work."
+
+    - role: insights_analyst
+      agents: [builder1_finance, builder2_insights]
+      coverage: "Finance (partial) + Insights. Financial analysis covered."
+
+  unassigned_roles:
+    - role: product_lead
+      priority: HIGH
+      gap: "James does this manually. No automated backlog prioritization."
+
+    - role: delivery_manager
+      priority: HIGH
+      gap: "Dude dispatches but doesn't track task completion or sprint cadence."
+
+    - role: architect
+      priority: HIGH
+      gap: "No design reviews. Technical debt accumulates without oversight."
+
+    - role: qa_gatekeeper
+      priority: CRITICAL
+      gap: "No automated quality gate. Code ships without test verification."
+
+    - role: security_auditor
+      priority: HIGH
+      gap: "Weekly audit service exists but no persistent security agent."
+
+    - role: technical_writer
+      priority: MEDIUM
+      gap: "Documentation is ad-hoc. No systematic maintenance."
+
+    - role: integration_builder
+      priority: MEDIUM
+      gap: "API integrations handled by general builders. No specialization."
+
+  non_dev_agents:
+    count: 6
+    agents: [vault, scrooge, pa, sales, cs, rental, crystal-pa]
+    notes: "Personal/business utility agents. Not part of the dev team structure."

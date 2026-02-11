@@ -1,0 +1,9 @@
+# OpenClaw Control Plane — Code Ownership
+# Default: James owns everything
+* @mcdonjam82
+
+# Critical paths require explicit review
+/registry/ @mcdonjam82
+/.github/workflows/ @mcdonjam82
+/bootstrap/ @mcdonjam82
+/ops/ @mcdonjam82

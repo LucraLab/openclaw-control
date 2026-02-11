@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Forbidden capability combinations for roles",
+  "forbidden_combinations": [
+    {
+      "role": "security_auditor",
+      "forbidden_tools": ["write", "edit"],
+      "reason": "Auditors must not modify what they audit"
+    },
+    {
+      "role": "technical_writer",
+      "forbidden_tools": ["exec"],
+      "reason": "Writers must not execute commands"
+    },
+    {
+      "role": "product_lead",
+      "forbidden_tools": ["exec"],
+      "reason": "Product leads must not execute commands"
+    },
+    {
+      "role": "qa_gatekeeper",
+      "forbidden_tools": [],
+      "reason": "QA needs broad read access but must not write feature code (enforced by hard_limits)"
+    }
+  ],
+  "required_hard_limit_keywords": ["NEVER", "MUST"],
+  "max_tools_per_role": 10
+}

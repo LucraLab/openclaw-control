@@ -1,0 +1,79 @@
+name: Capability Lint
+on:
+  pull_request:
+    paths:
+      - 'registry/ROLE_REGISTRY.yaml'
+      - 'registry/schemas/capability-rules.json'
+
+jobs:
+  lint-capabilities:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check capability rules
+        run: |
+          python3 << 'SCRIPT'
+          import yaml
+          import json
+          import sys
+
+          with open('registry/ROLE_REGISTRY.yaml') as f:
+              registry = yaml.safe_load(f)
+
+          # Load capability rules if present
+          rules_path = 'registry/schemas/capability-rules.json'
+          try:
+              with open(rules_path) as f:
+                  rules = json.load(f)
+          except FileNotFoundError:
+              print(f"WARN: {rules_path} not found, using built-in rules")
+              rules = {
+                  "forbidden_combinations": [
+                      {"role": "security_auditor", "forbidden_tools": ["write", "edit"], "reason": "Auditors must not modify what they audit"},
+                      {"role": "technical_writer", "forbidden_tools": ["exec"], "reason": "Writers must not execute commands"},
+                      {"role": "product_lead", "forbidden_tools": ["exec"], "reason": "Product leads must not execute commands"}
+                  ]
+              }
+
+          errors = []
+
+          # Check forbidden combinations
+          for rule in rules.get('forbidden_combinations', []):
+              role = rule['role']
+              forbidden_tools = rule['forbidden_tools']
+              reason = rule['reason']
+
+              if role in registry.get('roles', {}):
+                  allowed = registry['roles'][role].get('allowed_tools', [])
+                  violations = [t for t in forbidden_tools if t in allowed]
+                  if violations:
+                      errors.append(
+                          f"FAIL: Role '{role}' has forbidden tools {violations}. "
+                          f"Reason: {reason}"
+                      )
+
+          # Check hard_limits convention
+          for role_name, role_def in registry.get('roles', {}).items():
+              limits = role_def.get('hard_limits', [])
+              if not limits:
+                  errors.append(f"FAIL: Role '{role_name}' has no hard_limits")
+              for limit in limits:
+                  if 'NEVER' not in limit and 'MUST' not in limit:
+                      errors.append(
+                          f"WARN: Role '{role_name}' has a hard_limit without "
+                          f"NEVER/MUST keyword: '{limit[:60]}...'"
+                      )
+
+          if errors:
+              for e in errors:
+                  print(e)
+              # Only fail on FAIL errors, not WARN
+              if any(e.startswith("FAIL") for e in errors):
+                  sys.exit(1)
+          else:
+              print(f"PASS: All capability rules satisfied for {len(registry.get('roles', {}))} roles")
+          SCRIPT

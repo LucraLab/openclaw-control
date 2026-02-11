@@ -1,0 +1,63 @@
+name: Schema Validation
+on:
+  pull_request:
+    paths:
+      - 'registry/**'
+      - 'bootstrap/**'
+
+jobs:
+  validate-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install pyyaml jsonschema
+
+      - name: Validate ROLE_REGISTRY.yaml
+        run: |
+          python3 << 'SCRIPT'
+          import yaml
+          import json
+          import sys
+          import re
+
+          # Load registry
+          with open('registry/ROLE_REGISTRY.yaml') as f:
+              registry = yaml.safe_load(f)
+
+          if registry is None:
+              print("FAIL: Registry file is empty")
+              sys.exit(1)
+
+          # Load schema if present
+          schema_path = 'registry/schemas/role-registry.schema.json'
+          try:
+              with open(schema_path) as f:
+                  schema = json.load(f)
+              from jsonschema import validate, ValidationError
+              try:
+                  validate(instance=registry, schema=schema)
+                  print("PASS: Registry validates against schema")
+              except ValidationError as e:
+                  print(f"FAIL: {e.message}")
+                  sys.exit(1)
+          except FileNotFoundError:
+              print(f"WARN: Schema file {schema_path} not found, skipping schema validation")
+
+          # Check role names are lowercase_snake_case
+          for role_name in registry.get('roles', {}):
+              if not re.match(r'^[a-z][a-z0-9_]*$', role_name):
+                  print(f"FAIL: Role name '{role_name}' is not lowercase_snake_case")
+                  sys.exit(1)
+
+          # Check all roles have required fields
+          required = ['purpose', 'responsibilities', 'allowed_tools', 'hard_limits']
+          for role_name, role_def in registry.get('roles', {}).items():
+              for field in required:
+                  if field not in role_def or not role_def[field]:
+                      print(f"FAIL: Role '{role_name}' missing required field '{field}'")
+                      sys.exit(1)
+
+          print(f"PASS: {len(registry.get('roles', {}))} roles validated")
+          SCRIPT

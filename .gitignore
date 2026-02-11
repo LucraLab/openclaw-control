@@ -1,0 +1,26 @@
+# Secrets — NEVER commit
+.env*
+*.pem
+*.key
+*service_account*
+*credentials*
+**/secrets/
+**/.openclaw/
+
+# Raw proof dumps (use sanitized versions only)
+*.raw.log
+*.raw.txt
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+.idea/

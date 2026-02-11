@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenClaw Role Registry",
+  "type": "object",
+  "required": ["registry_version", "generated", "roles"],
+  "properties": {
+    "registry_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "generated": {
+      "type": "string"
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["purpose", "responsibilities", "allowed_tools", "hard_limits"],
+        "properties": {
+          "purpose": { "type": "string", "minLength": 10 },
+          "responsibilities": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "allowed_tools": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "event_subscriptions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "default_work_queues": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "hard_limits": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
