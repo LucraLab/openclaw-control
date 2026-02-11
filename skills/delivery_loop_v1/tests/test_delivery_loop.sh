@@ -114,8 +114,8 @@ echo ""
 # --- T3: Delivery loop fails closed without gh auth ---
 echo "--- T3: Fail-Closed Without GH Auth ---"
 if [ -f "$SCRIPTS_DIR/delivery_loop.sh" ]; then
-  # Unset GH auth for this test (use env -u to avoid credential-pattern flags)
-  NO_AUTH_OUT=$(env -u GH_TOKEN -u GITHUB_TOKEN GH_MOCK=0 \
+  # Point gh to a non-existent config dir so auth check fails
+  NO_AUTH_OUT=$(GH_CONFIG_DIR="$TEST_DIR/no-gh-config" GH_MOCK=0 \
     bash "$SCRIPTS_DIR/delivery_loop.sh" \
     --objective test-obj-2 \
     --task test-task-2 \

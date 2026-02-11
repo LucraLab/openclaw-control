@@ -142,7 +142,7 @@ fi
 if [ "$DRY_RUN" = "false" ]; then
   # Check for existing objective with same title hash
   TITLE_HASH=$(echo "$SAFE_TITLE" | md5sum 2>/dev/null | cut -d' ' -f1 || echo "nohash")
-  for existing in "$OBJECTIVES_DIR"/*.json 2>/dev/null; do
+  for existing in "$OBJECTIVES_DIR"/*.json; do
     [ -f "$existing" ] || continue
     EXISTING_TITLE=$(python3 -c "import json; print(json.load(open('$existing')).get('description',''))" 2>/dev/null || echo "")
     EXISTING_HASH=$(echo "$EXISTING_TITLE" | md5sum 2>/dev/null | cut -d' ' -f1 || echo "other")
