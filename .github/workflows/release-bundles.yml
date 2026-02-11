@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build-and-release:
@@ -17,6 +18,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Verify cosign installed
+        run: cosign version
 
       - name: Extract tag name
         id: tag
@@ -35,6 +42,36 @@ jobs:
           cd dist/bundles && sha256sum -c SHA256SUMS.txt
           echo "All checksums verified."
 
+      - name: Sign each bundle asset (cosign keyless OIDC)
+        run: |
+          cd dist/bundles
+          for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            echo "Signing ${file}..."
+            cosign sign-blob --yes \
+              --output-signature "${file}.sig" \
+              --output-certificate "${file}.cert" \
+              "${file}"
+            echo "  -> ${file}.sig + ${file}.cert created"
+          done
+          echo ""
+          echo "Signature files:"
+          ls -la *.sig *.cert
+
+      - name: Verify signatures (self-test)
+        run: |
+          cd dist/bundles
+          for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            echo "Verifying ${file}..."
+            cosign verify-blob "${file}" \
+              --signature "${file}.sig" \
+              --certificate "${file}.cert" \
+              --certificate-identity-regexp "https://github.com/LucraLab/openclaw-control/.*" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+            echo "  PASS"
+          done
+          echo ""
+          echo "All 5 assets verified."
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -52,24 +89,48 @@ jobs:
           - \`context_bundle.json\` — Boot contract and platform metadata
           - \`SHA256SUMS.txt\` — Integrity checksums for all bundles
 
+          ## Signatures
+          Each bundle asset includes a \`.sig\` (signature) and \`.cert\` (certificate) file for cosign verification.
+
           ## Verification
           \`\`\`bash
+          # Integrity check
           sha256sum -c SHA256SUMS.txt
+
+          # Authenticity check (requires cosign)
+          for f in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            cosign verify-blob \$f --signature \$f.sig --certificate \$f.cert \\
+              --certificate-identity-regexp 'https://github.com/LucraLab/openclaw-control/.*' \\
+              --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+          done
           \`\`\`" \
             dist/bundles/role_registry.json \
             dist/bundles/tools_catalog.json \
             dist/bundles/policy_bundle.json \
             dist/bundles/context_bundle.json \
-            dist/bundles/SHA256SUMS.txt
+            dist/bundles/SHA256SUMS.txt \
+            dist/bundles/*.sig \
+            dist/bundles/*.cert
 
       - name: Summary
         run: |
-          echo "## Bundle Release: ${{ steps.tag.outputs.TAG_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          TAG="${{ steps.tag.outputs.TAG_NAME }}"
+          echo "## Signed Bundle Release: ${TAG}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Asset | Signature | Certificate |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-----------|-------------|" >> "$GITHUB_STEP_SUMMARY"
+          for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            echo "| ${file} | ${file}.sig | ${file}.cert |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Bundle Assets" >> "$GITHUB_STEP_SUMMARY"
           echo "| Asset | Size |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|------|" >> "$GITHUB_STEP_SUMMARY"
           for f in dist/bundles/*.json dist/bundles/SHA256SUMS.txt; do
             name=$(basename "$f")
             size=$(wc -c < "$f")
-            echo "| $name | ${size} bytes |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ${name} | ${size} bytes |" >> "$GITHUB_STEP_SUMMARY"
           done
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Identity: \`https://github.com/LucraLab/openclaw-control/.github/workflows/release-bundles.yml\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Issuer: \`https://token.actions.githubusercontent.com\`" >> "$GITHUB_STEP_SUMMARY"
