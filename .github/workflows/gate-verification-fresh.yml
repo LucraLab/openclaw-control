@@ -1,0 +1,31 @@
+name: Verification Gate
+
+on:
+  pull_request:
+
+jobs:
+  verification-gate:
+    name: verification-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run verification gate tests
+        run: node scripts/verification_gate.test.js
+
+      - name: Run verification gate
+        run: node scripts/run_verification_gate.js --ci
+
+      - name: Upload verification summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-summary
+          path: tmp/verification-summary.json
+          retention-days: 30
