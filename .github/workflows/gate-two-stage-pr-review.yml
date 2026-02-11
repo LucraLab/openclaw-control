@@ -1,0 +1,33 @@
+name: Two-Stage PR Review
+
+on:
+  pull_request:
+
+jobs:
+  two-stage-pr-review:
+    name: two-stage-pr-review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run two-stage PR review tests
+        run: node scripts/two_stage_pr_review.test.js
+
+      - name: Run two-stage PR review gate
+        run: node scripts/run_two_stage_pr_review.js --ci
+
+      - name: Upload review report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: two-stage-pr-review
+          path: |
+            tmp/two-stage-pr-review.json
+            tmp/two-stage-pr-review.md
+          retention-days: 30
