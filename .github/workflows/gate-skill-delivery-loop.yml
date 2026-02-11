@@ -1,0 +1,102 @@
+name: Skill Delivery Loop Gate
+
+on:
+  pull_request:
+    paths:
+      - 'skills/delivery_loop_v1/**'
+      - 'scripts/objective_create.sh'
+      - 'scripts/delivery_loop.sh'
+      - 'scripts/task_pr_sync.sh'
+      - 'scripts/staging_smoke.sh'
+
+jobs:
+  validate-skill:
+    name: Validate delivery_loop_v1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check skill.yaml structure
+        run: |
+          pip install pyyaml
+          python3 << 'SCRIPT'
+          import yaml, sys
+
+          with open('skills/delivery_loop_v1/skill.yaml') as f:
+              skill = yaml.safe_load(f)
+
+          errors = []
+
+          # Required fields
+          for field in ['name', 'version', 'description', 'allowed_repos', 'forbidden_ops', 'required_gates']:
+              if field not in skill:
+                  errors.append(f"Missing required field: {field}")
+
+          # Validate allowed_repos is non-empty
+          if not skill.get('allowed_repos'):
+              errors.append("allowed_repos must not be empty")
+
+          # Validate forbidden_ops includes critical items
+          required_forbidden = ['outbound_comms', 'production_deploy', 'force_push']
+          forbidden = skill.get('forbidden_ops', [])
+          for rf in required_forbidden:
+              if rf not in forbidden:
+                  errors.append(f"forbidden_ops missing critical item: {rf}")
+
+          # Validate required_gates matches branch protection
+          gates = skill.get('required_gates', [])
+          for g in ['scan-secrets', 'scan-public-safe', 'qa-gate']:
+              if g not in gates:
+                  errors.append(f"required_gates missing: {g}")
+
+          if errors:
+              for e in errors:
+                  print(f"FAIL: {e}")
+              sys.exit(1)
+
+          print(f"PASS: skill.yaml validated (v{skill['version']})")
+          SCRIPT
+
+      - name: Check required docs exist
+        run: |
+          MISSING=0
+          for doc in SPEC.md runbook.md threat_model.md; do
+            if [ ! -f "skills/delivery_loop_v1/$doc" ]; then
+              echo "FAIL: Missing skills/delivery_loop_v1/$doc"
+              MISSING=1
+            fi
+          done
+
+          if [ "$MISSING" -eq 0 ]; then
+            echo "PASS: All required docs present"
+          else
+            exit 1
+          fi
+
+      - name: Check scripts are executable-safe
+        run: |
+          ERRORS=0
+          for script in scripts/objective_create.sh scripts/delivery_loop.sh scripts/task_pr_sync.sh scripts/staging_smoke.sh; do
+            if [ -f "$script" ]; then
+              # Check for set -u (unbound variable protection)
+              if ! grep -q 'set.*-.*u' "$script"; then
+                echo "WARN: $script missing 'set -u'"
+              fi
+              # Check for secret patterns in script itself
+              if grep -PqE '(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16})' "$script"; then
+                echo "FAIL: Secret pattern found in $script"
+                ERRORS=1
+              fi
+            fi
+          done
+
+          if [ "$ERRORS" -eq 0 ]; then
+            echo "PASS: Scripts are safe"
+          else
+            exit 1
+          fi
+
+      - name: Lint markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: 'skills/delivery_loop_v1/**/*.md'
