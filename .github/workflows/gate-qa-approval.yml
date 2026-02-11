@@ -1,0 +1,29 @@
+name: QA Approval Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+
+jobs:
+  qa-gate:
+    name: QA Approval Required
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for qa-approved label
+        run: |
+          echo "Checking PR #${{ github.event.pull_request.number }} for qa-approved label..."
+          LABELS='${{ toJSON(github.event.pull_request.labels.*.name) }}'
+          echo "Labels: $LABELS"
+
+          if echo "$LABELS" | grep -q '"qa-approved"'; then
+            echo "QA APPROVED — qa-approved label found."
+            exit 0
+          else
+            echo ""
+            echo "================================================================"
+            echo "  QA GATE BLOCKED"
+            echo "  This PR requires the 'qa-approved' label before merge."
+            echo "  qa_gatekeeper must review and add the label."
+            echo "================================================================"
+            exit 1
+          fi
