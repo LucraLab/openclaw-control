@@ -1,16 +1,19 @@
-name: Sign Bundle Release (Cosign Keyless)
+name: Re-Sign Bundle Release (Manual)
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to re-sign (e.g., registry@2026.02.11.4)'
+        required: true
+        type: string
 
 permissions:
   contents: write
   id-token: write
 
 jobs:
-  sign-bundles:
+  re-sign-bundles:
     runs-on: ubuntu-latest
-    if: startsWith(github.event.release.tag_name, 'registry@') || startsWith(github.event.release.tag_name, 'bootstrap@')
     steps:
       - uses: actions/checkout@v4
 
@@ -24,12 +27,8 @@ jobs:
       - name: Verify cosign installed
         run: cosign version
 
-      - name: Extract tag
-        id: tag
-        run: echo "TAG_NAME=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-
-      - name: Build bundles locally
-        run: node scripts/build_bundles.js --tag "${{ steps.tag.outputs.TAG_NAME }}" --outdir dist/bundles
+      - name: Build bundles
+        run: node scripts/build_bundles.js --tag "${{ inputs.tag_name }}" --outdir dist/bundles
 
       - name: Verify SHA256SUMS
         run: cd dist/bundles && sha256sum -c SHA256SUMS.txt
@@ -53,7 +52,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${{ steps.tag.outputs.TAG_NAME }}"
+          TAG="${{ inputs.tag_name }}"
           cd dist/bundles
           for ext in sig cert; do
             for file in *.${ext}; do
@@ -81,14 +80,11 @@ jobs:
 
       - name: Summary
         run: |
-          TAG="${{ steps.tag.outputs.TAG_NAME }}"
-          echo "## Signed Bundle Release: ${TAG}" >> "$GITHUB_STEP_SUMMARY"
+          TAG="${{ inputs.tag_name }}"
+          echo "## Re-Signed Bundle Release: ${TAG}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Asset | Signature | Certificate |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|-----------|-------------|" >> "$GITHUB_STEP_SUMMARY"
           for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
             echo "| ${file} | ${file}.sig | ${file}.cert |" >> "$GITHUB_STEP_SUMMARY"
           done
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Identity: \`https://github.com/LucraLab/openclaw-control/.github/workflows/release-sign-bundles.yml\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "Issuer: \`https://token.actions.githubusercontent.com\`" >> "$GITHUB_STEP_SUMMARY"
