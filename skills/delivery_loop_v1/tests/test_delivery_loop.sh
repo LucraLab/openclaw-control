@@ -115,13 +115,13 @@ echo ""
 echo "--- T3: Fail-Closed Without GH Auth ---"
 if [ -f "$SCRIPTS_DIR/delivery_loop.sh" ]; then
   # Point gh to a non-existent config dir so auth check fails
+  NO_AUTH_RC=0
   NO_AUTH_OUT=$(GH_CONFIG_DIR="$TEST_DIR/no-gh-config" GH_MOCK=0 \
     bash "$SCRIPTS_DIR/delivery_loop.sh" \
     --objective test-obj-2 \
     --task test-task-2 \
     --repo LucraLab/openclaw-control \
-    --dry-run 2>&1) || true
-  NO_AUTH_RC=$?
+    --dry-run 2>&1) || NO_AUTH_RC=$?
 
   if [ "$NO_AUTH_RC" -ne 0 ] && echo "$NO_AUTH_OUT" | grep -qi "auth\|token\|credential\|not.logged"; then
     check "delivery_loop_fail_closed_without_gh_auth" "PASS" "rc=$NO_AUTH_RC"
