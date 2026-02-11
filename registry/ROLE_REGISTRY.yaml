@@ -615,3 +615,4 @@ coverage_summary:
     count: 6
     agents: [vault, scrooge, pa, sales, cs, rental, crystal-pa]
     notes: "Personal/business utility agents. Not part of the dev team structure."
+# CI smoketest: trigger schema + capability lint gates
