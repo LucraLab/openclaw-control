@@ -17,13 +17,52 @@ jobs:
 
           if echo "$LABELS" | grep -q '"qa-approved"'; then
             echo "QA APPROVED — qa-approved label found."
-            exit 0
           else
             echo ""
             echo "================================================================"
             echo "  QA GATE BLOCKED"
             echo "  This PR requires the 'qa-approved' label before merge."
             echo "  qa_gatekeeper must review and add the label."
+            echo ""
+            echo "  Additionally, CODEOWNERS review is required."
+            echo "  Branch protection enforces:"
+            echo "    - 1 approving review (CODEOWNERS)"
+            echo "    - Stale reviews dismissed on new push"
+            echo "    - Last push must be approved"
             echo "================================================================"
             exit 1
+          fi
+
+      - name: Verify label was added by authorized user
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Verifying qa-approved label provenance..."
+          # Fetch label events from timeline
+          EVENTS=$(gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/events --paginate 2>/dev/null || echo "[]")
+
+          # Find who added qa-approved label
+          LABELER=$(echo "$EVENTS" | python3 -c "
+          import json, sys
+          events = json.load(sys.stdin)
+          for e in reversed(events):
+              if e.get('event') == 'labeled' and e.get('label', {}).get('name') == 'qa-approved':
+                  print(e.get('actor', {}).get('login', 'unknown'))
+                  sys.exit(0)
+          print('NOT_FOUND')
+          " 2>/dev/null || echo "PARSE_ERROR")
+
+          echo "Label added by: $LABELER"
+
+          # Authorized label setters (CODEOWNERS + automation)
+          AUTHORIZED="mcdonjam82 github-actions[bot]"
+          if echo "$AUTHORIZED" | grep -qw "$LABELER"; then
+            echo "AUTHORIZED: $LABELER is permitted to approve QA."
+            exit 0
+          else
+            echo "WARNING: $LABELER is not in authorized approvers list."
+            echo "Authorized: $AUTHORIZED"
+            echo "Allowing for now (warn-only mode) — will enforce in next sprint."
+            exit 0
           fi

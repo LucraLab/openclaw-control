@@ -1,9 +1,17 @@
 # OpenClaw Control Plane — Code Ownership
+# Branch protection requires CODEOWNERS review for merge.
+# enforce_admins = true: even admins must comply.
+
 # Default: James owns everything
 * @mcdonjam82
 
-# Critical paths require explicit review
-/registry/ @mcdonjam82
+# Critical paths (any change triggers mandatory review)
+/registry/          @mcdonjam82
+/.github/           @mcdonjam82
 /.github/workflows/ @mcdonjam82
-/bootstrap/ @mcdonjam82
-/ops/ @mcdonjam82
+/bootstrap/         @mcdonjam82
+/ops/               @mcdonjam82
+/scripts/           @mcdonjam82
+
+# Security-sensitive files
+CODEOWNERS          @mcdonjam82
