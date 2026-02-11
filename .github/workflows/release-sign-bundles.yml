@@ -1,0 +1,94 @@
+name: Sign Bundle Release (Cosign Keyless)
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  sign-bundles:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'registry@') || startsWith(github.event.release.tag_name, 'bootstrap@')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Verify cosign installed
+        run: cosign version
+
+      - name: Extract tag
+        id: tag
+        run: echo "TAG_NAME=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build bundles locally
+        run: node scripts/build_bundles.js --tag "${{ steps.tag.outputs.TAG_NAME }}" --outdir dist/bundles
+
+      - name: Verify SHA256SUMS
+        run: cd dist/bundles && sha256sum -c SHA256SUMS.txt
+
+      - name: Sign each bundle asset (keyless OIDC)
+        run: |
+          cd dist/bundles
+          for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            echo "Signing ${file}..."
+            cosign sign-blob --yes \
+              --output-signature "${file}.sig" \
+              --output-certificate "${file}.cert" \
+              "${file}"
+            echo "  -> ${file}.sig + ${file}.cert created"
+          done
+          echo ""
+          echo "Signature files:"
+          ls -la *.sig *.cert
+
+      - name: Upload signatures to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.tag.outputs.TAG_NAME }}"
+          cd dist/bundles
+          for ext in sig cert; do
+            for file in *.${ext}; do
+              echo "Uploading ${file}..."
+              gh release upload "$TAG" "$file" \
+                --repo "${{ github.repository }}" \
+                --clobber
+            done
+          done
+
+      - name: Verify signatures (self-test)
+        run: |
+          cd dist/bundles
+          for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            echo "Verifying ${file}..."
+            cosign verify-blob "${file}" \
+              --signature "${file}.sig" \
+              --certificate "${file}.cert" \
+              --certificate-identity-regexp "https://github.com/LucraLab/openclaw-control/.*" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+            echo "  PASS"
+          done
+          echo ""
+          echo "All 5 assets verified."
+
+      - name: Summary
+        run: |
+          TAG="${{ steps.tag.outputs.TAG_NAME }}"
+          echo "## Signed Bundle Release: ${TAG}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Asset | Signature | Certificate |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-----------|-------------|" >> "$GITHUB_STEP_SUMMARY"
+          for file in role_registry.json tools_catalog.json policy_bundle.json context_bundle.json SHA256SUMS.txt; do
+            echo "| ${file} | ${file}.sig | ${file}.cert |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Identity: \`https://github.com/LucraLab/openclaw-control/.github/workflows/release-sign-bundles.yml\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Issuer: \`https://token.actions.githubusercontent.com\`" >> "$GITHUB_STEP_SUMMARY"

@@ -41,15 +41,30 @@ gh release download <BUNDLE_TAG> --repo LucraLab/openclaw-control --dir ./bundle
 
 An agent MUST complete ALL of these steps in order. Failure at any step means the agent does NOT start (fail-closed).
 
-### Step 1 — Download Bundles
+### Step 1 — Download Bundles + Signatures
 
 ```
-Input: BUNDLE_TAG (e.g., registry@2026.02.11.2)
-Action: Download all 5 bundle files from GitHub Release
+Input: BUNDLE_TAG (e.g., registry@2026.02.11.4)
+Action: Download all bundle files AND their .sig/.cert signature files from GitHub Release
 Output: Local copies in /workspace/bundles/
+  - 5 bundle files (4 JSON + SHA256SUMS.txt)
+  - 10 signature files (5x .sig + 5x .cert)
 ```
 
-### Step 2 — Verify Integrity
+### Step 2 — Verify Authenticity (Cosign)
+
+```
+Action: For each bundle file, verify its cosign keyless signature:
+  cosign verify-blob <file> --signature <file>.sig --certificate <file>.cert \
+    --certificate-identity-regexp "https://github.com/LucraLab/openclaw-control/.*" \
+    --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+Pass: All 5 files verified against LucraLab/openclaw-control workflow identity
+Fail: Exit code 11, emit BOOTSTRAP_FAILED(reason=SIGNATURE_VERIFY_FAILED)
+```
+
+This ensures bundles were produced by the official LucraLab GitHub Actions workflow, not just that they are unmodified.
+
+### Step 3 — Verify Integrity (SHA256)
 
 ```
 Action: Run sha256sum -c SHA256SUMS.txt
@@ -57,7 +72,7 @@ Pass: All checksums match
 Fail: Exit non-zero, emit BOOTSTRAP_FAILED event
 ```
 
-### Step 3 — Load Role Policy
+### Step 4 — Load Role Policy
 
 ```
 Action: Parse role_registry.json
@@ -65,7 +80,7 @@ Confirm: AGENT_ROLE exists in roles object
 Fail: Exit non-zero (role not found = misconfigured agent)
 ```
 
-### Step 4 — Validate Capabilities
+### Step 5 — Validate Capabilities
 
 ```
 Action: Parse policy_bundle.json
@@ -74,7 +89,7 @@ Confirm: No forbidden combinations violated
 Fail: Exit non-zero, emit CAPABILITY_DENIED event
 ```
 
-### Step 5 — Load Tools
+### Step 6 — Load Tools
 
 ```
 Action: Parse tools_catalog.json
@@ -82,7 +97,7 @@ Filter: Only tools allowed for AGENT_ROLE
 Output: Available tool set for this session
 ```
 
-### Step 6 — Register in Ledger
+### Step 7 — Register in Ledger
 
 ```
 Action: POST to ledger /agents endpoint
@@ -91,7 +106,7 @@ Pass: 2xx response with agent_id
 Fail: Retry once, then exit non-zero
 ```
 
-### Step 7 — Subscribe to Events
+### Step 8 — Subscribe to Events
 
 ```
 Action: Subscribe to events defined in role's event_subscriptions
@@ -99,7 +114,7 @@ Pass: Subscription confirmed
 Fail: Log warning (non-fatal, agent can still operate)
 ```
 
-### Step 8 — Emit READY
+### Step 9 — Emit READY
 
 ```
 Action: POST to event bus
@@ -107,7 +122,7 @@ Event: { type: "AGENT_READY", agent_name, role, bundle_tag, timestamp }
 This signals to the platform that the agent is operational.
 ```
 
-### Step 9 — Start Main Process
+### Step 10 — Start Main Process
 
 ```
 Action: Hand off to the agent's main application logic
