@@ -1,0 +1,75 @@
+name: Public Safety Scan
+on:
+  pull_request:
+
+jobs:
+  scan-public-safe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for sensitive patterns in changed files
+        run: |
+          FAILED=0
+
+          # Get list of changed files in this PR
+          FILES=$(git diff --name-only --diff-filter=ACMRT origin/main...HEAD 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || find . -name '*.md' -o -name '*.yaml' -o -name '*.yml' -o -name '*.json' | grep -v .git)
+
+          for file in $FILES; do
+            [ -f "$file" ] || continue
+
+            # Skip binary files and this workflow itself
+            case "$file" in
+              *.png|*.jpg|*.gif|*.ico) continue ;;
+            esac
+
+            # 1. IPv4 addresses (except placeholders like <..._IPV4>)
+            if grep -PnE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' "$file" 2>/dev/null | grep -vE '<[A-Z_]+>' | grep -q .; then
+              echo "FAIL: IPv4 address found in $file"
+              grep -PnE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' "$file" | grep -vE '<[A-Z_]+>' | head -3
+              FAILED=1
+            fi
+
+            # 2. Hostinger / VPS hostname patterns
+            if grep -PniE '(hstgr\.cloud|srv[0-9]+|hostinger)' "$file" 2>/dev/null | grep -q .; then
+              echo "FAIL: VPS hostname pattern found in $file"
+              grep -PniE '(hstgr\.cloud|srv[0-9]+|hostinger)' "$file" | head -3
+              FAILED=1
+            fi
+
+            # 3. SSH commands to real hosts (ssh user@host)
+            if grep -PnE 'ssh\s+\w+@[0-9a-zA-Z]' "$file" 2>/dev/null | grep -vE '<[A-Z_]+>' | grep -q .; then
+              echo "FAIL: SSH command to real host found in $file"
+              grep -PnE 'ssh\s+\w+@[0-9a-zA-Z]' "$file" | grep -vE '<[A-Z_]+>' | head -3
+              FAILED=1
+            fi
+
+            # 4. PRIVATE KEY blocks
+            if grep -PnE 'BEGIN\s+(RSA\s+)?PRIVATE\s+KEY' "$file" 2>/dev/null | grep -q .; then
+              echo "FAIL: Private key block found in $file"
+              FAILED=1
+            fi
+
+            # 5. Common secret value patterns (actual values, not variable names)
+            if grep -PnE '(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[0-9A-Z]{16}|xoxb-[0-9]+-[a-zA-Z0-9]+)' "$file" 2>/dev/null | grep -q .; then
+              echo "FAIL: API key/token pattern found in $file"
+              FAILED=1
+            fi
+
+            # 6. Tailscale IP ranges (100.x.x.x internal)
+            if grep -PnE '\b100\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b' "$file" 2>/dev/null | grep -vE '<[A-Z_]+>' | grep -q .; then
+              echo "FAIL: Tailscale/internal IP found in $file"
+              grep -PnE '\b100\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b' "$file" | grep -vE '<[A-Z_]+>' | head -3
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo ""
+            echo "PUBLIC SAFETY CHECK FAILED"
+            echo "This is a PUBLIC repo. Use placeholders like <DASHBOARD_VPS_IPV4> instead of real values."
+            echo "See CONTRIBUTING.md for public-safe rules."
+            exit 1
+          fi
+
+          echo "PASS: No sensitive patterns detected in changed files"

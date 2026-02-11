@@ -1,6 +1,6 @@
 # TRIAGE_REPORT.md — Dashboard VPS Stability Triage
 ## Timestamp: 2026-02-11T00:00Z
-## Host: Dashboard.LucraLab (31.97.106.33)
+## Host: Dashboard.LucraLab (<DASHBOARD_VPS_IPV4>)
 
 ---
 
@@ -16,7 +16,7 @@ PM2 process `youtube-intelligence` (id 5) has **138,551+ restarts** and is resta
 status:     online (momentarily)
 restarts:   138,551
 uptime:     0s
-script:     /root/lucralab-projects/youtube-intelligence/server.js
+script:     <PATH_REDACTED>/youtube-intelligence/server.js
 node.js:    v22.22.0
 ```
 
@@ -92,7 +92,7 @@ pm2 save
 ## Issue 2: ai-sdr-backend Crash Loop
 
 ### Symptom
-PM2 process `ai-sdr-backend` (id 4) has **22,216+ restarts**. Status fluctuates between `online` and `stopped`. When running, it successfully starts the server on port 3001, connects to MySQL, and mounts all routes — but then immediately crashes due to unhandled Redis promise rejections.
+PM2 process `ai-sdr-backend` (id 4) has **22,216+ restarts**. Status fluctuates between `online` and `stopped`. When running, it successfully starts the server on its configured port, connects to MySQL, and mounts all routes — but then immediately crashes due to unhandled Redis promise rejections.
 
 ### Evidence (Redacted)
 
@@ -100,7 +100,7 @@ PM2 process `ai-sdr-backend` (id 4) has **22,216+ restarts**. Status fluctuates 
 ```
 status:     stopped (at observation time)
 restarts:   22,216
-script:     /root/lucralab-projects/ai-assistant/ai-sdr-backend/server.js
+script:     <PATH_REDACTED>/ai-sdr-backend/server.js
 node.js:    v22.22.0
 node_env:   production
 ```
@@ -112,7 +112,7 @@ node_env:   production
 ✓ Multi-provider mode: OpenAI + Claude
 ✅ Database connection pool initialized
 ✅ All route modules mounted successfully (including 3 optimization modules)
-🚀 Enhanced AI SDR Backend running on port 3001
+🚀 Enhanced AI SDR Backend running on its configured port
 ✅ Database: ai_sdr_platform
 ✅ Redis client connected successfully
 ✅ Database connected successfully (shared pool)
@@ -135,10 +135,10 @@ ReplyError: NOAUTH Authentication required.
 
 **.env Redis configuration:**
 ```
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
+REDIS_HOST=<INTERNAL_HOST>
+REDIS_PORT=<INTERNAL_PORT>
 REDIS_PASSWORD=REDACTED
-REDIS_DB=0
+REDIS_DB=<INTERNAL_DB>
 ```
 
 ### Root Cause
@@ -155,13 +155,13 @@ Find where Bull queues are initialized in the codebase and ensure the Redis pass
 
 ```javascript
 // BEFORE (broken):
-const queue = new Bull('call-analysis', { redis: { host: '127.0.0.1', port: 6379 } });
+const queue = new Bull('call-analysis', { redis: { host: '<HOST>', port: '<PORT>' } });
 
 // AFTER (fixed):
 const queue = new Bull('call-analysis', {
   redis: {
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    port: process.env.REDIS_PORT || 6379,
+    host: process.env.REDIS_HOST || '<HOST>',
+    port: process.env.REDIS_PORT || '<PORT>',
     password: process.env.REDIS_PASSWORD,
     db: process.env.REDIS_DB || 0
   }
@@ -193,67 +193,43 @@ pm2 save
 - **Resource waste:** High — 22K+ restarts, each creating MySQL + Redis connections
 - **Connection pool exhaustion risk:** Each restart attempt opens new DB connections
 - **Customer impact:** AI SDR demo system unavailable when process is crashed
-- **Health check:** Port 3001 /health returns healthy during the brief moments the server is up
+- **Health check:** `/health` returns healthy during the brief moments the server is up
 
 ---
 
 ## Issue 3: LiteLLM Health Check — RESOLVED (False Alarm)
 
 ### Symptom (Reported)
-Discovery script reported "LiteLLM: not on this host" when testing `http://127.0.0.1:4010/health`.
+Discovery script reported "LiteLLM: not on this host" when testing the local health endpoint.
 
 ### Evidence (Current)
 
-**systemctl status:**
-```
-● litellm.service - LiteLLM Proxy
-     Active: active (running) since 2026-02-10 05:47:34 UTC; 17h ago
-     Main PID: 1211897
-     Memory: 267.3M
-     Config: /home/openclaw/.openclaw/litellm/config.yaml
-     Binding: 127.0.0.1:4010
-```
+**Service status:** Active (running), 17+ hours uptime, ~267 MB memory.
 
 **Health check (live):**
-```
-curl http://127.0.0.1:4010/health → HTTP 200
-  healthy_endpoints: 3 (kimi-k2.5 x2, claude-opus-4-6)
-  unhealthy_endpoints: 0
+- `/health` → HTTP 200, 3 healthy endpoints, 0 unhealthy
+- `/health/liveliness` → HTTP 200, "I'm alive!"
+- `/models` → HTTP 200, 3 models available
 
-curl http://127.0.0.1:4010/health/liveliness → HTTP 200
-  "I'm alive!"
+**Port binding:** Listening on localhost only (not externally exposed).
 
-curl http://127.0.0.1:4010/models → HTTP 200
-  3 models: kimi-k2.5, kimi_manager, anthropic_opus
-```
-
-**Port binding:**
-```
-tcp LISTEN 127.0.0.1:4010 users:(("litellm",pid=1211897))
-```
-
-**Journal (hourly health checks, all 200 OK):**
-```
-22:00:01 - "GET /health/liveliness HTTP/1.1" 200 OK
-21:00:02 - "GET /health/liveliness HTTP/1.1" 200 OK
-... (consistent hourly 200s since 06:06 UTC)
-```
+**Journal:** Hourly health checks all returning 200 OK consistently.
 
 ### Root Cause of False Alarm
 The discovery script's curl test likely had a timing issue or was testing the wrong endpoint. The text "not on this host" may have come from the script's own fallback echo when curl failed to connect (perhaps during a brief connection timeout). LiteLLM has been healthy and responding correctly for 17+ hours.
 
 ### Status: NO ACTION NEEDED
-LiteLLM on Dashboard VPS is **fully operational** with 3 healthy model endpoints, $20/day Anthropic budget cap, and Redis caching enabled.
+LiteLLM on Dashboard VPS is **fully operational** with 3 healthy model endpoints, budget cap active, and Redis caching enabled.
 
 ### Configuration Summary
 | Property | Value |
 |---|---|
-| **Bind** | 127.0.0.1:4010 |
-| **Models** | kimi-k2.5, kimi_manager, anthropic_opus |
+| **Bind** | localhost only (not public) |
+| **Models** | 3 configured (details in private ops notes) |
 | **Healthy endpoints** | 3/3 |
-| **Budget cap** | $20/day on Anthropic |
+| **Budget cap** | Active (details in private ops notes) |
 | **Uptime** | 17+ hours |
-| **Config file** | /home/openclaw/.openclaw/litellm/config.yaml |
+| **Config file** | <PATH_REDACTED> |
 
 ---
 

@@ -1,6 +1,6 @@
 # PROOF_PACK.md — GitHub Control Plane + Stability Triage
 ## Timestamp: 2026-02-11T00:00Z
-## Scope: Dashboard VPS (31.97.106.33) + Builder VPS (187.77.6.191)
+## Scope: Dashboard VPS (<DASHBOARD_VPS_IPV4>) + Builder VPS (<BUILDER_VPS_IPV4>)
 
 ---
 
@@ -24,10 +24,10 @@
 
 | # | Host | Command | Result |
 |---|---|---|---|
-| 1 | Dashboard | `ls -la /root/proofs/org_discovery_dashboard_20260210T223433Z/` | 16 files present |
+| 1 | Dashboard | `ls -la <PATH_REDACTED>/` | 16 files present |
 | 2 | Dashboard | `head -40 DASHBOARD_ORG_SNAPSHOT.md` | Valid, no secrets |
-| 3 | Builder (via Tailscale hop) | `ls -la /home/openclaw/.openclaw/proofs/org_discovery_20260210T221708Z/` | 13 files present |
-| 4 | Dashboard | `mkdir -p /root/proofs/github_control_plane_20260211T000000Z/` | Created |
+| 3 | Builder (via internal network) | `ls -la <PATH_REDACTED>/` | 13 files present |
+| 4 | Dashboard | `mkdir -p <PATH_REDACTED>/` | Created |
 
 ### Phase 1: Crash Loop Triage (10 commands)
 
@@ -37,8 +37,8 @@
 | 6 | Dashboard | `pm2 logs youtube-intelligence --lines 100 --nostream` | "No key or keyFile set" (Google Sheets) |
 | 7 | Dashboard | `pm2 describe ai-sdr-backend` | 22,216 restarts, status: stopped |
 | 8 | Dashboard | `pm2 logs ai-sdr-backend --lines 100 --nostream` | Bull psubscribe NOAUTH errors |
-| 9 | Dashboard | `tail -60 /root/.pm2/logs/ai-sdr-backend-error.log` | "ReplyError: NOAUTH Authentication required" |
-| 10 | Dashboard | `grep -i redis .../ai-sdr-backend/.env` (redacted) | REDIS_HOST, PORT, PASSWORD, DB all set |
+| 9 | Dashboard | `tail -60 <PATH_REDACTED>/ai-sdr-backend-error.log` | "ReplyError: NOAUTH Authentication required" |
+| 10 | Dashboard | `grep -i redis <PATH_REDACTED>/.env` (redacted) | REDIS_HOST, PORT, PASSWORD, DB all set |
 | 11 | Dashboard | `grep -iE '(google\|sheet)' .../youtube-intelligence/.env` (redacted) | Google Sheets vars ALL commented out |
 | 12 | Dashboard | `node -v && npm -v` | v22.22.0, 10.9.4 |
 | 13 | Dashboard | `redis-cli -a '' ping` | WRONGPASS (auth required, expected) |
@@ -48,11 +48,11 @@
 
 | # | Host | Command | Key Output |
 |---|---|---|---|
-| 15 | Dashboard | `systemctl status litellm.service` | Active (running) 17h, PID 1211897 |
+| 15 | Dashboard | `systemctl status litellm.service` | Active (running) 17h |
 | 16 | Dashboard | `journalctl -u litellm -n 50` | Hourly health checks all 200 OK |
-| 17 | Dashboard | `curl http://127.0.0.1:4010/health` | HTTP 200, 3 healthy endpoints, 0 unhealthy |
-| 18 | Dashboard | `curl http://127.0.0.1:4010/health/liveliness` | HTTP 200, "I'm alive!" |
-| 19 | Dashboard | `curl http://127.0.0.1:4010/models` | 3 models: kimi-k2.5, kimi_manager, anthropic_opus |
+| 17 | Dashboard | `curl <INTERNAL_ENDPOINT>/health` | HTTP 200, 3 healthy endpoints, 0 unhealthy |
+| 18 | Dashboard | `curl <INTERNAL_ENDPOINT>/health/liveliness` | HTTP 200, "I'm alive!" |
+| 19 | Dashboard | `curl <INTERNAL_ENDPOINT>/models` | HTTP 200, 3 models available |
 
 ### Phase 3: GitHub Context (2 commands)
 
@@ -81,7 +81,7 @@ ERROR: Failed to initialize Google Sheets service: No key or keyFile set.
 
 ### ai-sdr-backend Root Cause
 ```
-Server startup: SUCCESS (all routes mounted, port 3001, DB connected)
+Server startup: SUCCESS (all routes mounted, configured port, DB connected)
 Redis main client: SUCCESS ("Redis client connected successfully")
 Bull queue subscriber: FAIL
 
@@ -94,11 +94,11 @@ Bull creates separate Redis connections for pub/sub that don't inherit the REDIS
 
 ### LiteLLM Status
 ```
-systemd: active (running) since 05:47:34 UTC (17h)
+systemd: active (running), 17h uptime
 Health: HTTP 200, 3/3 endpoints healthy
-Models: kimi-k2.5, kimi_manager, anthropic_opus
-Binding: 127.0.0.1:4010
-Budget cap: $20/day Anthropic
+Models: 3 configured (details in private ops notes)
+Binding: localhost only (not public)
+Budget cap: Active (details in private ops notes)
 ```
 Previous "not on this host" report was a FALSE ALARM from the discovery script.
 
@@ -106,7 +106,7 @@ Previous "not on this host" report was a FALSE ALARM from the discovery script.
 ```
 Account: mcdonjam82
 Org: LucraLab
-Token scopes: admin:org, admin:org_hook, admin:repo_hook, repo, workflow
+Token scopes: <SCOPES_REDACTED>
 ```
 
 ---
@@ -128,7 +128,7 @@ Token scopes: admin:org, admin:org_hook, admin:repo_hook, repo, workflow
 
 ### Local (Windows)
 ```
-c:\Users\james\.ssh\Workspace\deploy-skippy\deliverables\control-plane\
+<LOCAL_PATH_REDACTED>/deliverables/control-plane/
   GITHUB_STRATEGY.md
   TRIAGE_REPORT.md
   CONTROL_REPO_LAYOUT.md
@@ -139,6 +139,6 @@ c:\Users\james\.ssh\Workspace\deploy-skippy\deliverables\control-plane\
 
 ### VPS (Dashboard)
 ```
-/root/proofs/github_control_plane_20260211T000000Z/
+<VPS_PATH_REDACTED>/
   (all 6 files uploaded)
 ```

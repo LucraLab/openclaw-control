@@ -3,8 +3,8 @@
 # Version: 1.1.0
 # Generated: 2026-02-11T00:00:00Z
 # Sources:
-#   - Builder VPS: /home/openclaw/.openclaw/proofs/org_discovery_20260210T221708Z/ROLE_REGISTRY_V1.yaml
-#   - Dashboard VPS: /root/proofs/org_discovery_dashboard_20260210T223433Z/DASHBOARD_ROLE_REGISTRY_V1.yaml
+#   - Builder VPS: <PATH_REDACTED>/ROLE_REGISTRY_V1.yaml
+#   - Dashboard VPS: <PATH_REDACTED>/DASHBOARD_ROLE_REGISTRY_V1.yaml
 #
 # This is the CANONICAL role registry. Both VPS-specific registries
 # are superseded by this merged version.
@@ -15,14 +15,14 @@ generated: "2026-02-11T00:00:00Z"
 platform: "LucraLab / OpenClaw Multi-Agent Platform"
 hosts:
   dashboard:
-    hostname: Dashboard.LucraLab
-    ip: 31.97.106.33
-    tailscale: 100.83.32.96
+    hostname: "<DASHBOARD_HOST>"
+    ip: "<DASHBOARD_VPS_IPV4>"
+    tailscale: "<DASHBOARD_TAILSCALE_IP>"
     role: Orchestrator + Application Host
   builder:
-    hostname: srv1349469
-    ip: 187.77.6.191
-    tailscale: 100.75.216.57
+    hostname: "<BUILDER_HOST>"
+    ip: "<BUILDER_VPS_IPV4>"
+    tailscale: "<BUILDER_TAILSCALE_IP>"
     role: Agent Execution Environment
 
 # ============================================================
@@ -461,12 +461,12 @@ roles:
 # ============================================================
 
 all_agents:
-  # Builder1 (openclaw, uid 1001, port 8080)
+  # Builder1 agents
   builder1_main:
     agent_id: main
     gateway: builder1
     emoji: lobster
-    workspace: /home/openclaw/builder
+    workspace: "<BUILDER1_WORKSPACE>"
     assigned_roles: [fullstack_builder]
     notes: "Primary code builder."
 
@@ -474,7 +474,7 @@ all_agents:
     agent_id: vault
     gateway: builder1
     emoji: lock
-    workspace: /home/openclaw/builder/agents/vault
+    workspace: "<BUILDER1_WORKSPACE>/agents/vault"
     assigned_roles: []
     notes: "Secrets manager. Specialized utility, not a dev team role."
 
@@ -482,7 +482,7 @@ all_agents:
     agent_id: finance
     gateway: builder1
     emoji: moneybag
-    workspace: /home/openclaw/builder/agents/finance
+    workspace: "<BUILDER1_WORKSPACE>/agents/finance"
     assigned_roles: [insights_analyst]
     notes: "Business financial tracking. Partial match to insights_analyst."
 
@@ -490,7 +490,7 @@ all_agents:
     agent_id: scrooge
     gateway: builder1
     emoji: money-wings
-    workspace: /home/openclaw/builder/agents/scrooge
+    workspace: "<BUILDER1_WORKSPACE>/agents/scrooge"
     assigned_roles: []
     notes: "Personal spending tracker. Not a dev team role."
 
@@ -498,64 +498,64 @@ all_agents:
     agent_id: ops-1
     gateway: builder1
     emoji: wrench
-    workspace: /home/openclaw/builder/agents/ops-1
+    workspace: "<BUILDER1_WORKSPACE>/agents/ops-1"
     assigned_roles: [platform_builder]
     notes: "Monitors Builder2. Health scans, performance reviews, security audits."
 
-  # Builder2 (openclaw2, uid 1002, port 8082)
+  # Builder2 agents
   builder2_main:
     agent_id: main
     gateway: builder2
-    workspace: /home/openclaw2/builder
+    workspace: "<BUILDER2_WORKSPACE>"
     assigned_roles: [fullstack_builder]
     notes: "General-purpose builder for Builder2."
 
   builder2_pa:
     agent_id: pa
     gateway: builder2
-    workspace: /home/openclaw2/builder/agents/pa
+    workspace: "<BUILDER2_WORKSPACE>/agents/pa"
     assigned_roles: []
     notes: "Personal assistant. Not a dev team role."
 
   builder2_sales:
     agent_id: sales
     gateway: builder2
-    workspace: /home/openclaw2/builder/agents/sales
+    workspace: "<BUILDER2_WORKSPACE>/agents/sales"
     assigned_roles: []
     notes: "Sales pipeline. Not a dev team role."
 
   builder2_cs:
     agent_id: cs
     gateway: builder2
-    workspace: /home/openclaw2/builder/agents/cs
+    workspace: "<BUILDER2_WORKSPACE>/agents/cs"
     assigned_roles: []
     notes: "Customer support. Not a dev team role."
 
   builder2_rental:
     agent_id: rental
     gateway: builder2
-    workspace: /home/openclaw2/builder/agents/rental
+    workspace: "<BUILDER2_WORKSPACE>/agents/rental"
     assigned_roles: []
     notes: "Rental property management. Not a dev team role."
 
   builder2_insights:
     agent_id: insights
     gateway: builder2
-    workspace: /home/openclaw2/builder/agents/insights
+    workspace: "<BUILDER2_WORKSPACE>/agents/insights"
     assigned_roles: [insights_analyst]
     notes: "Data analysis and business intelligence."
 
   builder2_crystal_pa:
     agent_id: crystal-pa
     gateway: builder2
-    workspace: /home/openclaw2/builder/agents/crystal-pa
+    workspace: "<BUILDER2_WORKSPACE>/agents/crystal-pa"
     assigned_roles: []
     notes: "Enhanced personal assistant. Not a dev team role."
 
   builder2_ops2:
     agent_id: ops-2
     gateway: builder2
-    workspace: /home/openclaw2/builder/agents/ops-2
+    workspace: "<BUILDER2_WORKSPACE>/agents/ops-2"
     assigned_roles: [platform_builder]
     notes: "Reciprocal monitor for Builder1."
 
