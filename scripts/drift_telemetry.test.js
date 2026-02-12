@@ -113,6 +113,7 @@ test('DT-T5: contexts in different order still passes', () => {
         'ops-hardening',
         'executive-strategy',
         'arbiter-hints',
+        'evidence-graph',
         'lint-markdown',
         'isolation-guard',
         'drift-telemetry',

@@ -14,7 +14,8 @@
       "scan-secrets",
       "two-stage-pr-review",
       "verification-gate",
-      "arbiter-hints"
+      "arbiter-hints",
+      "evidence-graph"
     ]
   }
 }
