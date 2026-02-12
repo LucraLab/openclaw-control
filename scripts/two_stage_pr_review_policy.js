@@ -63,6 +63,11 @@ const STAGE2_MUST_PATTERNS = {
 const BINARY_ALLOWLIST = ['docs/images/', 'assets/', 'bundles/'];
 const MAX_FILE_SIZE = 1_000_000; // 1 MB
 
+// Operational record prefixes — exempt from public-safe and secret scanning.
+// Files under ops/ are deployment proofs that legitimately contain IP addresses,
+// SSH commands, and hostnames documenting what happened on VPS infrastructure.
+const OPS_SAFE_PREFIXES = ['ops/'];
+
 // Temporal claim patterns
 const TEMPORAL_CLAIMS = [
   /already\s+(?:verified|tested|checked)\b/i,
@@ -238,9 +243,12 @@ function scanQualityIssues({ changedFiles, fileStats, fileContents, prBody }) {
       }
     }
 
+    // Skip secret + public-safe scanning for operational record files (ops/)
+    const isOpsSafe = OPS_SAFE_PREFIXES.some(p => file.startsWith(p));
+
     // MUST: Secret patterns in file content
     const content = fileContents[file] || '';
-    if (content) {
+    if (content && !isOpsSafe) {
       for (const pattern of STAGE2_MUST_PATTERNS.secrets) {
         if (pattern.test(content)) {
           findings.push({
@@ -373,6 +381,7 @@ module.exports = {
   BINARY_ALLOWLIST,
   MAX_FILE_SIZE,
   TEMPORAL_CLAIMS,
+  OPS_SAFE_PREFIXES,
   checkSpecCompliance,
   scanQualityIssues,
   buildReport
