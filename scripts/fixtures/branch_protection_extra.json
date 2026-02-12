@@ -7,6 +7,7 @@
       "capability-matrix",
       "context-budget",
       "drift-telemetry",
+      "executive-strategy",
       "isolation-guard",
       "lint-markdown",
       "ops-hardening",
