@@ -20,12 +20,18 @@ set -uo pipefail
 
 # --- Configuration ---
 DELIVERY_OS_HOME="${DELIVERY_OS_HOME:-$HOME/.openclaw}"
-EVENTS_LOG="$DELIVERY_OS_HOME/_logs/agent-events.jsonl"
 
 # --- Source shared libraries ---
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${_SCRIPT_DIR}/lib/oc_paths.sh"
 source "${_SCRIPT_DIR}/lib/oc_events.sh"
+
+# --- Require agent identity (Layer 4 isolation) ---
+oc_require_agent_id || exit 1
+OC_AGENT_ROOT="$(oc_agent_root)"
+
+# Legacy path constant for migration
+_LEGACY_OBJECTIVES_DIR="$DELIVERY_OS_HOME/objectives"
 
 # --- Parse arguments ---
 REPO_DIR=""
@@ -57,6 +63,7 @@ echo "============================================"
 echo "  Staging Smoke Tests"
 echo "  $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "  Repo: $REPO_DIR"
+echo "  Agent: $OC_AGENT_ID"
 echo "============================================"
 echo ""
 
@@ -188,8 +195,13 @@ if [ "$FAILED" -eq 0 ]; then
   if [ "$DRY_RUN" = "false" ]; then
     emit_event "DELIVERY_STAGING_SMOKE_PASS" "checks_passed=$PASSED checks_total=$TOTAL"
 
-    # Update objective with smoke pass
-    OBJ_FILE="$DELIVERY_OS_HOME/objectives/${OBJ_ID}.json"
+    # Update objective with smoke pass (agent-scoped path)
+    OBJ_DIR="$OC_AGENT_ROOT/objectives"
+
+    # Migrate legacy objective if needed
+    oc_migrate_legacy_file "$_LEGACY_OBJECTIVES_DIR/${OBJ_ID}.json" "$OBJ_DIR/${OBJ_ID}.json" || true
+
+    OBJ_FILE="$OBJ_DIR/${OBJ_ID}.json"
     if [ -f "$OBJ_FILE" ]; then
       python3 -c "
 import json, os, stat

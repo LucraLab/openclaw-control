@@ -11,6 +11,7 @@
 #
 # Environment:
 #   DELIVERY_OS_HOME — Path to Delivery OS store (default: ~/.openclaw)
+#   OC_AGENT_ID     — Required. Must be: builder|executor|auditor
 #
 # Exit codes:
 #   0 = objective created (JSON printed to stdout)
@@ -21,8 +22,6 @@ set -uo pipefail
 
 # --- Configuration ---
 DELIVERY_OS_HOME="${DELIVERY_OS_HOME:-$HOME/.openclaw}"
-OBJECTIVES_DIR="$DELIVERY_OS_HOME/objectives"
-EVENTS_LOG="$DELIVERY_OS_HOME/_logs/agent-events.jsonl"
 
 # Secret redaction pattern
 SECRET_PATTERN='(API_KEY|APIKEY|_KEY$|TOKEN|SECRET|PASSWORD|PASSWD|AUTH_|BEARER|PRIVATE_KEY)'
@@ -37,6 +36,14 @@ ALLOWED_TYPES="feature_small_cli ops_hardening validator_or_ci_gate docs_only_ch
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${_SCRIPT_DIR}/lib/oc_paths.sh"
 source "${_SCRIPT_DIR}/lib/oc_events.sh"
+
+# --- Require agent identity (Layer 4 isolation) ---
+oc_require_agent_id || exit 1
+OC_AGENT_ROOT="$(oc_agent_root)"
+OBJECTIVES_DIR="$OC_AGENT_ROOT/objectives"
+
+# Legacy path constant for migration
+_LEGACY_OBJECTIVES_DIR="$DELIVERY_OS_HOME/objectives"
 
 # --- Parse arguments ---
 OBJ_TYPE=""
@@ -143,8 +150,11 @@ if [ -z "$OBJ_JSON" ]; then
   exit 2
 fi
 
-# --- Idempotency check ---
+# --- Idempotency check (scans agent-scoped dir) ---
 if [ "$DRY_RUN" = "false" ]; then
+  # Ensure agent-scoped directory exists
+  mkdir -p "$OBJECTIVES_DIR"
+
   # Check for existing objective with same title hash
   TITLE_HASH=$(echo "$SAFE_TITLE" | md5sum 2>/dev/null | cut -d' ' -f1 || echo "nohash")
   for existing in "$OBJECTIVES_DIR"/*.json; do
@@ -169,7 +179,7 @@ if [ "$DRY_RUN" = "true" ]; then
   exit 0
 fi
 
-# --- Write objective ---
+# --- Write objective (to agent-scoped path) ---
 mkdir -p "$OBJECTIVES_DIR" 2>/dev/null
 OBJ_FILE="$OBJECTIVES_DIR/${OBJ_ID}.json"
 TMP_FILE="${OBJ_FILE}.tmp"
