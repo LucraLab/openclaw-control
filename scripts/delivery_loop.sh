@@ -40,6 +40,7 @@ UNSAFE_PATTERNS='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|hstgr\.cloud|sr
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${_SCRIPT_DIR}/lib/oc_paths.sh"
 source "${_SCRIPT_DIR}/lib/oc_events.sh"
+source "${_SCRIPT_DIR}/lib/oc_lock.sh"
 
 # --- Require agent identity (Layer 4 isolation) ---
 oc_require_agent_id || exit 1
@@ -82,6 +83,10 @@ if [ "$CLOSE_CHECK" = "true" ]; then
   # Migrate legacy files if needed (Option A: safe one-time migration)
   oc_migrate_legacy_file "$_LEGACY_OBJECTIVES_DIR/${OBJ_ID}.json" "$OBJECTIVES_DIR/${OBJ_ID}.json" || exit 1
   oc_migrate_legacy_file "$_LEGACY_OBJECTIVES_DIR/${OBJ_ID}-tasks.json" "$OBJECTIVES_DIR/${OBJ_ID}-tasks.json" || exit 1
+
+  # Acquire lock for close-check (Port #8)
+  lock_acquire "$OBJ_ID" || exit 1
+  lock_install_trap "$OBJ_ID"
 
   OBJ_FILE="$OBJECTIVES_DIR/${OBJ_ID}.json"
   TASKS_FILE="$OBJECTIVES_DIR/${OBJ_ID}-tasks.json"
@@ -223,6 +228,10 @@ if [ "$DRY_RUN" = "true" ]; then
   echo "  Skipping all write operations (dry-run mode)"
   exit 2
 fi
+
+# --- Acquire objective lock (Port #8) ---
+lock_acquire "$OBJ_ID" || exit 1
+lock_install_trap "$OBJ_ID"
 
 # --- Execute delivery steps ---
 echo "=== delivery_loop.sh ==="

@@ -21,6 +21,10 @@
  *  14. oc_migrate_legacy_file works
  *  15. no legacy path writes in production scripts
  *  16. all scripts use agent-scoped paths
+ *  17. oc_lock.sh exists and is sourceable
+ *  18. delivery_loop.sh sources oc_lock.sh
+ *  19. lock_acquire before Execute delivery steps
+ *  20. lock_install_trap present in delivery_loop.sh
  *
  * Exit 0 = gate pass, Exit 1 = gate fail
  */
@@ -266,6 +270,37 @@ check('all_scripts_use_agent_scoped_paths', () => {
   // task_pr_sync.sh requires agent_id but doesn't own path writes
   const tps = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'task_pr_sync.sh'), 'utf8');
   assert(tps.includes('oc_require_agent_id'), 'task_pr_sync.sh must call oc_require_agent_id');
+});
+
+// --- Smoke checks 17-20: Port #8 additions (Objective Locking) ---
+
+check('oc_lock_exists', () => {
+  assert(fs.existsSync(path.join(LIB_DIR, 'oc_lock.sh')), 'oc_lock.sh missing');
+  const r = bash(`source "${LIB_DIR}/oc_paths.sh" && source "${LIB_DIR}/oc_events.sh" && source "${LIB_DIR}/oc_lock.sh" && echo ok`);
+  assert(r.exitCode === 0 && r.stdout === 'ok', 'oc_lock.sh not sourceable');
+});
+
+check('delivery_loop_sources_oc_lock', () => {
+  const content = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'delivery_loop.sh'), 'utf8');
+  assert(content.includes('lib/oc_lock.sh'), 'delivery_loop.sh must source oc_lock.sh');
+});
+
+check('lock_acquire_before_execute', () => {
+  const content = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'delivery_loop.sh'), 'utf8');
+  const lockPos = content.indexOf('lock_acquire "$OBJ_ID"');
+  const executePos = content.indexOf('# --- Execute delivery steps ---');
+  assert(lockPos > 0, 'lock_acquire "$OBJ_ID" not found');
+  assert(executePos > 0, '"Execute delivery steps" marker not found');
+  assert(lockPos < executePos, 'lock_acquire must appear before "Execute delivery steps"');
+});
+
+check('lock_install_trap_present', () => {
+  const content = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'delivery_loop.sh'), 'utf8');
+  assert(content.includes('lock_install_trap'), 'delivery_loop.sh must call lock_install_trap');
+  // Verify trap is installed after lock acquire
+  const trapPos = content.indexOf('lock_install_trap');
+  const lockPos = content.indexOf('lock_acquire "$OBJ_ID"');
+  assert(trapPos > lockPos, 'lock_install_trap must appear after lock_acquire');
 });
 
 // --- Report ---
