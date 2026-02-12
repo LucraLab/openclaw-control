@@ -15,7 +15,8 @@
       "scan-secrets",
       "two-stage-pr-review",
       "unknown-check",
-      "verification-gate"
+      "verification-gate",
+      "arbiter-hints"
     ]
   }
 }

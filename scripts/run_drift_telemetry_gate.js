@@ -56,6 +56,7 @@ const EXPECTED_CONTEXTS = [
   'lint-markdown',
   'ops-hardening',
   'executive-strategy',
+  'arbiter-hints',
   'scan-public-safe',
   'scan-secrets',
   'two-stage-pr-review',
@@ -75,6 +76,7 @@ const REQUIRED_GATE_WORKFLOWS = {
   'gate-two-stage-pr-review.yml': 'two-stage-pr-review',
   'gate-ops-hardening.yml': 'ops-hardening',
   'gate-executive-strategy.yml': 'executive-strategy',
+  'gate-arbiter-hints.yml': 'arbiter-hints',
   'gate-verification-fresh.yml': 'verification-gate'
 };
 
