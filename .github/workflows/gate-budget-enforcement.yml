@@ -1,0 +1,33 @@
+name: Budget Enforcement
+
+on:
+  pull_request:
+
+jobs:
+  budget-enforcement:
+    name: budget-enforcement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run budget enforcement tests
+        run: node scripts/budget_enforcement.test.js
+
+      - name: Run budget enforcement gate
+        run: node scripts/run_budget_enforcement_gate.js --ci
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budget-enforcement-report
+          path: |
+            tmp/budget-enforcement-report.json
+            tmp/budget-enforcement-report.md
+          retention-days: 30
