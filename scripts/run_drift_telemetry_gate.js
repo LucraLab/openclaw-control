@@ -51,6 +51,7 @@ const EXPECTED_CONTEXTS = [
   'budget-enforcement',
   'capability-matrix',
   'context-budget',
+  'drift-telemetry',
   'isolation-guard',
   'lint-markdown',
   'scan-public-safe',

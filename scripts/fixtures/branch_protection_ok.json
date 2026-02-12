@@ -11,7 +11,8 @@
       "budget-enforcement",
       "capability-matrix",
       "isolation-guard",
-      "arbitration"
+      "arbitration",
+      "drift-telemetry"
     ]
   }
 }

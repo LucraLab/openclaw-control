@@ -10,7 +10,8 @@
       "two-stage-pr-review",
       "budget-enforcement",
       "capability-matrix",
-      "isolation-guard"
+      "isolation-guard",
+      "drift-telemetry"
     ]
   }
 }
