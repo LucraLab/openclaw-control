@@ -41,6 +41,7 @@ _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${_SCRIPT_DIR}/lib/oc_paths.sh"
 source "${_SCRIPT_DIR}/lib/oc_events.sh"
 source "${_SCRIPT_DIR}/lib/oc_lock.sh"
+source "${_SCRIPT_DIR}/lib/oc_resource_lock.sh"
 
 # --- Require agent identity (Layer 4 isolation) ---
 oc_require_agent_id || exit 1
@@ -57,6 +58,7 @@ REPO=""
 DRY_RUN=false
 ONCE=false
 CLOSE_CHECK=false
+RUN_TOKEN_PATH="${RUN_TOKEN:-}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -66,6 +68,7 @@ while [ $# -gt 0 ]; do
     --dry-run) DRY_RUN=true; shift ;;
     --once) ONCE=true; shift ;;
     --close-check) CLOSE_CHECK=true; shift ;;
+    --run-token) RUN_TOKEN_PATH="$2"; shift 2 ;;
     *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
   esac
 done
@@ -229,9 +232,48 @@ if [ "$DRY_RUN" = "true" ]; then
   exit 2
 fi
 
-# --- Acquire objective lock (Port #8) ---
+# --- Acquire resource + objective locks (Port #9 + Port #8) ---
+_RESOURCE_LOCK_IDS=""
+if [ -n "${RUN_TOKEN_PATH:-}" ] && [ -f "$RUN_TOKEN_PATH" ]; then
+  # Verify run token matches objective/repo
+  _TOKEN_OBJ=$(python3 -c "import json; print(json.load(open('$RUN_TOKEN_PATH')).get('obj_id',''))" 2>/dev/null)
+  _TOKEN_REPO=$(python3 -c "import json; print(json.load(open('$RUN_TOKEN_PATH')).get('repo',''))" 2>/dev/null)
+  if [ "$_TOKEN_OBJ" != "$OBJ_ID" ]; then
+    echo "REFUSED: Run token obj_id='$_TOKEN_OBJ' != --objective '$OBJ_ID'" >&2
+    emit_event "DELIVERY_REFUSED" "reason=run_token_obj_mismatch"
+    exit 1
+  fi
+  if [ "$_TOKEN_REPO" != "$REPO" ]; then
+    echo "REFUSED: Run token repo='$_TOKEN_REPO' != --repo '$REPO'" >&2
+    emit_event "DELIVERY_REFUSED" "reason=run_token_repo_mismatch"
+    exit 1
+  fi
+  # Read resource lock IDs
+  _RESOURCE_LOCK_IDS=$(python3 -c "
+import json
+for lid in json.load(open('$RUN_TOKEN_PATH')).get('resource_lock_ids', []):
+    print(lid)
+" 2>/dev/null)
+  # Acquire resource locks first (lock ordering: resource → objective)
+  for _lid in $_RESOURCE_LOCK_IDS; do
+    resource_lock_acquire "$_lid" || exit 1
+  done
+fi
+
+# Acquire objective lock (Port #8)
 lock_acquire "$OBJ_ID" || exit 1
-lock_install_trap "$OBJ_ID"
+
+# Install combined trap (release objective first, then resource — reverse order)
+if [ -n "$_RESOURCE_LOCK_IDS" ]; then
+  _CLEANUP="lock_release '$OBJ_ID'"
+  for _lid in $_RESOURCE_LOCK_IDS; do
+    _CLEANUP="$_CLEANUP; resource_lock_release '$_lid'"
+  done
+  # shellcheck disable=SC2064
+  trap "$_CLEANUP" EXIT INT TERM
+else
+  lock_install_trap "$OBJ_ID"
+fi
 
 # --- Execute delivery steps ---
 echo "=== delivery_loop.sh ==="
