@@ -54,6 +54,7 @@ const EXPECTED_CONTEXTS = [
   'drift-telemetry',
   'isolation-guard',
   'lint-markdown',
+  'ops-hardening',
   'scan-public-safe',
   'scan-secrets',
   'two-stage-pr-review',
@@ -71,6 +72,7 @@ const REQUIRED_GATE_WORKFLOWS = {
   'gate-publicsafe.yml': 'scan-public-safe',
   'gate-secrets.yml': 'scan-secrets',
   'gate-two-stage-pr-review.yml': 'two-stage-pr-review',
+  'gate-ops-hardening.yml': 'ops-hardening',
   'gate-verification-fresh.yml': 'verification-gate'
 };
 

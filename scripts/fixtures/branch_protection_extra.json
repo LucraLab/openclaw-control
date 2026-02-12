@@ -2,18 +2,19 @@
   "required_status_checks": {
     "strict": true,
     "contexts": [
-      "verification-gate",
-      "scan-secrets",
-      "scan-public-safe",
-      "lint-markdown",
-      "context-budget",
-      "two-stage-pr-review",
+      "arbitration",
       "budget-enforcement",
       "capability-matrix",
-      "isolation-guard",
-      "arbitration",
+      "context-budget",
       "drift-telemetry",
-      "unknown-check"
+      "isolation-guard",
+      "lint-markdown",
+      "ops-hardening",
+      "scan-public-safe",
+      "scan-secrets",
+      "two-stage-pr-review",
+      "unknown-check",
+      "verification-gate"
     ]
   }
 }
