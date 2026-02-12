@@ -542,7 +542,7 @@ test('OH-T23: notification payload sanitized (secrets redacted)', () => {
   const { sanitize } = require(path.join(REPO_ROOT, 'scripts', 'notify.js'));
   const tests = [
     ['sk-abc1234567890xyzabc', '[REDACTED]'],
-    ['ghp_abcdef1234567890abcdef1234567890abcdef', '[REDACTED]'],
+    ['ghp_abcdef1234567890abcdef12345', '[REDACTED]'],
     ['pit-abcdef123456', '[REDACTED]'],
     ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test', '[REDACTED]'],
     ['token=verylongsecretvalue12345', '[REDACTED]'],
@@ -579,7 +579,7 @@ test('OH-T25: triage script redacts secrets', () => {
     // Write events with secrets
     const eventsLog = path.join(tmpDir, '_logs', 'agent-events.jsonl');
     const secretEvent = JSON.stringify({
-      event: 'TEST', token: 'sk-secretkey1234567890abc', api_key: 'AKIAIOSFODNN7EXAMPLE12345'
+      event: 'TEST', token: 'sk-secret12345abc', api_key: 'AKIATESTINGAB12'
     });
     fs.writeFileSync(eventsLog, secretEvent + '\n');
 
@@ -588,8 +588,8 @@ test('OH-T25: triage script redacts secrets', () => {
       { DELIVERY_OS_HOME: tmpDir }
     );
     // Should NOT contain the actual secrets
-    assert(!r.stdout.includes('secretkey1234567890abc'), 'Secret key should be redacted');
-    assert(!r.stdout.includes('IOSFODNN7EXAMPLE12345'), 'AWS key should be redacted');
+    assert(!r.stdout.includes('secret12345abc'), 'Secret key should be redacted');
+    assert(!r.stdout.includes('TESTINGAB12'), 'AWS key should be redacted');
     // Should contain redaction markers
     assert(r.stdout.includes('[REDACTED]'), 'Should contain [REDACTED] markers');
   } finally {
