@@ -111,6 +111,7 @@ test('DT-T5: contexts in different order still passes', () => {
         'scan-secrets',
         'scan-public-safe',
         'ops-hardening',
+        'executive-strategy',
         'lint-markdown',
         'isolation-guard',
         'drift-telemetry',
