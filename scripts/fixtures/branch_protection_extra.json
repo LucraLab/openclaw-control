@@ -12,6 +12,7 @@
       "capability-matrix",
       "isolation-guard",
       "arbitration",
+      "drift-telemetry",
       "unknown-check"
     ]
   }
