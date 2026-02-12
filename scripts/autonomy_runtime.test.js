@@ -665,6 +665,146 @@ test('G7: killswitch.js guard exits 2 (fail-closed) on unreadable runtime dir', 
 });
 
 // ═══════════════════════════════════════════════
+// H) QUARANTINE LOCK (RACE FIX) TESTS
+// ═══════════════════════════════════════════════
+console.log('');
+console.log('--- H) Quarantine Lock ---');
+
+test('H1: pickAgentSkipQuarantine acquires and releases lock file', () => {
+  const { rt, dir } = loadRuntime();
+  try {
+    const lockPath = path.join(dir, 'quarantine.lock');
+    rt.quarantineAdd('agent-z');
+    const result = rt.pickAgentSkipQuarantine(['agent-a', 'agent-z'], { test: 'H1' });
+    assert(result === 'agent-a', `expected agent-a, got ${result}`);
+    // Lock must be released after pick
+    assert(!fs.existsSync(lockPath), 'lock file should not exist after pick');
+  } finally { cleanup(dir); }
+});
+
+test('H2: lock file cleaned up when all agents quarantined (null return)', () => {
+  const { rt, dir } = loadRuntime();
+  try {
+    const lockPath = path.join(dir, 'quarantine.lock');
+    rt.quarantineAdd('agent-a');
+    rt.quarantineAdd('agent-b');
+    const result = rt.pickAgentSkipQuarantine(['agent-a', 'agent-b'], { test: 'H2' });
+    assert(result === null, `expected null, got ${result}`);
+    assert(!fs.existsSync(lockPath), 'lock file should not exist after null return');
+  } finally { cleanup(dir); }
+});
+
+test('H3: stale lock (old timestamp) is auto-recovered', () => {
+  const { rt, dir } = loadRuntime();
+  try {
+    const lockPath = path.join(dir, 'quarantine.lock');
+    // Create a stale lock with timestamp 10 seconds ago
+    const staleLock = JSON.stringify({ pid: 99999, ts: new Date(Date.now() - 10000).toISOString() });
+    fs.writeFileSync(lockPath, staleLock);
+    // Pick should recover from stale lock and succeed
+    const result = rt.pickAgentSkipQuarantine(['agent-a'], { test: 'H3' });
+    assert(result === 'agent-a', `expected agent-a, got ${result}`);
+    assert(!fs.existsSync(lockPath), 'lock file should not exist after stale recovery');
+  } finally { cleanup(dir); }
+});
+
+test('H4: corrupt lock file is auto-recovered', () => {
+  const { rt, dir } = loadRuntime();
+  try {
+    const lockPath = path.join(dir, 'quarantine.lock');
+    // Create a corrupt lock (not valid JSON)
+    fs.writeFileSync(lockPath, 'NOT_VALID_JSON{{{');
+    // Pick should recover and succeed
+    const result = rt.pickAgentSkipQuarantine(['agent-a'], { test: 'H4' });
+    assert(result === 'agent-a', `expected agent-a, got ${result}`);
+    assert(!fs.existsSync(lockPath), 'lock file should not exist after corrupt recovery');
+  } finally { cleanup(dir); }
+});
+
+test('H5: quarantined agent never selected across many sequential picks with rotation', () => {
+  const { rt, dir } = loadRuntime();
+  try {
+    const agents = ['agent-a', 'agent-b', 'agent-c', 'agent-d', 'agent-e'];
+    let violations = 0;
+    const runs = 100;
+    for (let i = 0; i < runs; i++) {
+      const target = agents[i % agents.length];
+      rt.quarantineAdd(target);
+      const result = rt.pickAgentSkipQuarantine(agents, { rotation: i });
+      if (result === target) violations++;
+      rt.quarantineRemove(target);
+    }
+    assert(violations === 0, `quarantined agent selected ${violations}/${runs} times`);
+  } finally { cleanup(dir); }
+});
+
+test('H6: rapid add/remove maintains quarantine.json integrity', () => {
+  const { rt, dir } = loadRuntime();
+  try {
+    const qFile = path.join(dir, 'quarantine.json');
+    for (let i = 0; i < 50; i++) {
+      rt.quarantineAdd(`stress-${i % 10}`);
+      rt.quarantineRemove(`stress-${(i + 5) % 10}`);
+      // File must always be valid JSON
+      const content = fs.readFileSync(qFile, 'utf8');
+      const parsed = JSON.parse(content);
+      assert(parsed.version === 'v1', `corrupt version at iteration ${i}`);
+      assert(Array.isArray(parsed.agents), `corrupt agents at iteration ${i}`);
+    }
+    // Clean up
+    for (let i = 0; i < 10; i++) rt.quarantineRemove(`stress-${i}`);
+  } finally { cleanup(dir); }
+});
+
+test('H7: concurrent child-process picks never select quarantined agent', () => {
+  const dir = freshTmpDir();
+  try {
+    // Set up: quarantine agent-c
+    process.env.OPENCLAW_RUNTIME_DIR = dir;
+    delete require.cache[require.resolve('./autonomy_runtime')];
+    const rt = require('./autonomy_runtime');
+    rt.quarantineAdd('agent-c');
+
+    // Spawn N child processes that each do M picks and report results
+    const N = 5;
+    const M = 20;
+    const workerScript = `
+      process.env.OPENCLAW_RUNTIME_DIR = ${JSON.stringify(dir)};
+      delete require.cache[require.resolve(${JSON.stringify(require.resolve('./autonomy_runtime'))})];
+      const rt = require(${JSON.stringify(require.resolve('./autonomy_runtime'))});
+      const results = [];
+      for (let i = 0; i < ${M}; i++) {
+        results.push(rt.pickAgentSkipQuarantine(['agent-a','agent-b','agent-c','agent-d'], {w: process.pid, i}));
+      }
+      process.stdout.write(JSON.stringify(results));
+    `;
+
+    const results = [];
+    for (let i = 0; i < N; i++) {
+      const out = execSync(`node -e "${workerScript.replace(/"/g, '\\"').replace(/\n/g, ' ')}"`, {
+        encoding: 'utf8',
+        env: { ...process.env, OPENCLAW_RUNTIME_DIR: dir }
+      });
+      results.push(...JSON.parse(out));
+    }
+
+    const violations = results.filter(r => r === 'agent-c').length;
+    assert(violations === 0, `agent-c selected ${violations}/${results.length} times across ${N} workers`);
+    assert(results.length === N * M, `expected ${N * M} results, got ${results.length}`);
+  } finally { cleanup(dir); }
+});
+
+test('H8: lock constants exported correctly', () => {
+  const { rt } = loadRuntime();
+  try {
+    assert(rt.QUARANTINE_LOCK_FILE === 'quarantine.lock', `wrong lock file name: ${rt.QUARANTINE_LOCK_FILE}`);
+    assert(rt.LOCK_TIMEOUT_MS === 5000, `wrong timeout: ${rt.LOCK_TIMEOUT_MS}`);
+    assert(typeof rt.acquireLock === 'function', 'acquireLock not exported');
+    assert(typeof rt.releaseLock === 'function', 'releaseLock not exported');
+  } finally {}
+});
+
+// ═══════════════════════════════════════════════
 // SUMMARY
 // ═══════════════════════════════════════════════
 console.log('');
