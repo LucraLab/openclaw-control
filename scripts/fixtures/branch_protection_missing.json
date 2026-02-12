@@ -13,7 +13,8 @@
       "scan-public-safe",
       "scan-secrets",
       "two-stage-pr-review",
-      "verification-gate"
+      "verification-gate",
+      "arbiter-hints"
     ]
   }
 }
