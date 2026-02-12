@@ -58,6 +58,7 @@ const EXPECTED_CONTEXTS = [
   'executive-strategy',
   'arbiter-hints',
   'evidence-graph',
+  'fix-pack',
   'scan-public-safe',
   'scan-secrets',
   'two-stage-pr-review',
@@ -79,6 +80,7 @@ const REQUIRED_GATE_WORKFLOWS = {
   'gate-executive-strategy.yml': 'executive-strategy',
   'gate-arbiter-hints.yml': 'arbiter-hints',
   'gate-evidence-graph.yml': 'evidence-graph',
+  'gate-fix-pack.yml': 'fix-pack',
   'gate-verification-fresh.yml': 'verification-gate'
 };
 

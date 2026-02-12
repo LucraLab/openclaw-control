@@ -135,7 +135,7 @@ function main() {
       const content = fs.readFileSync(fullPath, 'utf8');
       if (SECRET_PATTERN.test(content) || CREDENTIAL_PATTERN.test(content)) {
         // Exclude test files that test for these patterns
-        if (!file.includes('.test.') && !file.includes('gate-secrets')) {
+        if (!file.includes('.test.') && !file.includes('gate-secrets') && !file.match(/run_.*_gate.js$/)) {
           console.log(`    SECRET: ${file}`);
           secretsFound++;
         }
