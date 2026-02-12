@@ -1,0 +1,37 @@
+{
+  "drift-telemetry": {
+    "gate": "drift-telemetry",
+    "status": "PASS",
+    "checks_passed": 10,
+    "checks_total": 10,
+    "failed": 0
+  },
+  "arbitration": {
+    "gate": "arbitration",
+    "status": "PASS",
+    "checks_passed": 10,
+    "checks_total": 10,
+    "failed": 0
+  },
+  "budget-enforcement": {
+    "gate": "budget-enforcement",
+    "status": "PASS",
+    "checks_passed": 9,
+    "checks_total": 9,
+    "failed": 0
+  },
+  "ops-hardening": {
+    "gate": "ops-hardening",
+    "status": "PASS",
+    "passed": 10,
+    "failed": 0,
+    "total": 10
+  },
+  "isolation-guard": {
+    "gate": "isolation-guard",
+    "status": "PASS",
+    "checks_passed": 20,
+    "checks_total": 20,
+    "failed": 0
+  }
+}

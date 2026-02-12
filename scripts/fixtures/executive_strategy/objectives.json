@@ -1,0 +1,48 @@
+{
+  "obj-42": {
+    "objective_id": "obj-42",
+    "status": "IN_PROGRESS",
+    "risk": "medium",
+    "created_at": "2026-02-01T00:00:00Z",
+    "tags": ["revenue", "customer_blocking"],
+    "roi_likelihood": "high",
+    "due_date": "2026-02-15T00:00:00Z",
+    "repo": "LucraLab/openclaw-control"
+  },
+  "obj-43": {
+    "objective_id": "obj-43",
+    "status": "IN_PROGRESS",
+    "risk": "low",
+    "created_at": "2026-02-08T00:00:00Z",
+    "tags": ["internal_tooling"],
+    "roi_likelihood": "low",
+    "repo": "LucraLab/openclaw-control"
+  },
+  "obj-44": {
+    "objective_id": "obj-44",
+    "status": "IN_PROGRESS",
+    "risk": "high",
+    "created_at": "2026-01-15T00:00:00Z",
+    "tags": ["sla_critical", "compliance"],
+    "roi_likelihood": "medium",
+    "due_date": "2026-02-10T00:00:00Z",
+    "repo": "LucraLab/openclaw-control"
+  },
+  "obj-45": {
+    "objective_id": "obj-45",
+    "status": "IN_PROGRESS",
+    "risk": "low",
+    "created_at": "2026-02-09T00:00:00Z",
+    "tags": ["nice_to_have"],
+    "roi_likelihood": "low",
+    "repo": "LucraLab/other"
+  },
+  "obj-46": {
+    "objective_id": "obj-46",
+    "status": "IN_PROGRESS",
+    "risk": "medium",
+    "created_at": "2026-02-05T00:00:00Z",
+    "tags": [],
+    "repo": "LucraLab/openclaw-control"
+  }
+}
