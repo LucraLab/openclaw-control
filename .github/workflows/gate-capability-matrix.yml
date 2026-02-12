@@ -1,0 +1,33 @@
+name: Capability Matrix
+
+on:
+  pull_request:
+
+jobs:
+  capability-matrix:
+    name: capability-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run capability matrix tests
+        run: node scripts/capability_matrix.test.js
+
+      - name: Run capability matrix gate
+        run: node scripts/run_capability_matrix_gate.js --ci
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capability-matrix-report
+          path: |
+            tmp/capability-matrix-report.json
+            tmp/capability-matrix-report.md
+          retention-days: 30

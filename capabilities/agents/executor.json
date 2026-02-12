@@ -1,0 +1,47 @@
+{
+  "agent_id": "executor",
+  "description": "Delivery executor agent — runs delivery loop, limited write scope",
+  "models_allowed": [
+    "claude-sonnet-4-5"
+  ],
+  "models_denied": [
+    "claude-opus-4-6",
+    "claude-opus-4-5-20250514",
+    "gpt-4o",
+    "o1-preview",
+    "o1",
+    "o3"
+  ],
+  "tools_allowed": [
+    "read",
+    "glob",
+    "grep",
+    "bash"
+  ],
+  "tools_denied": [
+    "write",
+    "edit",
+    "deploy",
+    "firewall",
+    "rotate_credentials"
+  ],
+  "side_effect_approval_required": [
+    "send",
+    "deploy",
+    "delete",
+    "rotate",
+    "firewall"
+  ],
+  "write_allow": [
+    "tmp/",
+    "_logs/"
+  ],
+  "write_deny": [
+    ".env",
+    "credentials/",
+    "secrets/",
+    ".github/",
+    "scripts/",
+    "registry/"
+  ]
+}
