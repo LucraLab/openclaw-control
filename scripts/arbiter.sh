@@ -159,6 +159,39 @@ _resource_lock_id() {
   echo "repo_branch:${repo}@${branch}"
 }
 
+# --- Optional strategy hints (Port #13) ---
+# Reads executive-strategy-hints.json and adjusts objective ordering.
+# Missing/invalid hints -> passthrough (fail closed).
+_apply_strategy_hints() {
+  local hints_file="${DELIVERY_OS_HOME:-$HOME/.openclaw}/artifacts/executive-strategy-hints.json"
+  local status_file
+  status_file="$(mktemp 2>/dev/null || echo /tmp/arbiter-hints-status-$$)"
+
+  if [ ! -f "${_SCRIPT_DIR}/lib/oc_arbiter_hints.py" ]; then
+    cat
+    emit_event "ARBITER_HINTS_SKIPPED" "reason=module_not_found"
+    rm -f "$status_file"
+    return
+  fi
+
+  python3 "${_SCRIPT_DIR}/lib/oc_arbiter_hints.py"     --hints "$hints_file"     --status-file "$status_file"
+
+  local status
+  status="$(cat "$status_file" 2>/dev/null || echo UNKNOWN)"
+  rm -f "$status_file"
+
+  case "$status" in
+    APPLIED*)
+      emit_event "ARBITER_HINTS_APPLIED" "detail=$status" ;;
+    SKIPPED*)
+      emit_event "ARBITER_HINTS_SKIPPED" "reason=${status#SKIPPED:}" ;;
+    FAILCLOSED*)
+      emit_event "ARBITER_HINTS_FAILCLOSED" "reason=${status#FAILCLOSED:}" ;;
+    *)
+      emit_event "ARBITER_HINTS_SKIPPED" "reason=unknown_status" ;;
+  esac
+}
+
 # --- Main arbitration loop ---
 SELECTED=false
 
@@ -226,7 +259,7 @@ print(json.dumps(token, indent=2))
     break
   fi
   # If we reach here, resource_lock_acquire already emitted ARBITRATION_BLOCKED
-done < <(_enumerate_objectives)
+done < <(_enumerate_objectives | _apply_strategy_hints)
 
 if [ "$SELECTED" = "false" ]; then
   emit_event "ARBITRATION_SKIPPED" "reason=no_candidate_selected"

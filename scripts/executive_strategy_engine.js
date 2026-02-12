@@ -18,6 +18,7 @@ const devIntel = require('./modules/dev_intel');
 const opsIntel = require('./modules/ops_intel');
 const businessIntel = require('./modules/business_intel');
 const llmAssist = require('./executive_llm_assist');
+const hintsModule = require('./executive_strategy_hints');
 
 const ENGINE_VERSION = '1.0.0';
 
@@ -328,4 +329,4 @@ function run(context, config) {
   return sanitizeObj(report);
 }
 
-module.exports = { run, scoreObjective, shouldTriggerLLM, sanitize, ENGINE_VERSION };
+module.exports = { run, scoreObjective, shouldTriggerLLM, sanitize, ENGINE_VERSION, generateHints: hintsModule.generateHints };
