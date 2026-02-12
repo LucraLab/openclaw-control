@@ -74,6 +74,51 @@ function emitEvent(eventType, payload) {
 // ─── A) Quarantine ───
 const QUARANTINE_FILE = 'quarantine.json';
 const MAX_QUARANTINE_AGENTS = 200;
+const QUARANTINE_LOCK_FILE = 'quarantine.lock';
+const LOCK_TIMEOUT_MS = 5000; // 5 second timeout
+
+// ─── Lockfile utilities ───
+function acquireLock() {
+  const lockPath = runtimePath(QUARANTINE_LOCK_FILE);
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < LOCK_TIMEOUT_MS) {
+    try {
+      // Try to create lock file exclusively (O_EXCL flag)
+      const fd = fs.openSync(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY, 0o644);
+      fs.writeSync(fd, JSON.stringify({ pid: process.pid, ts: isoNow() }));
+      fs.closeSync(fd);
+      return true;
+    } catch (e) {
+      // Lock exists, check if stale (older than timeout)
+      try {
+        const lockContent = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+        const lockAge = Date.now() - new Date(lockContent.ts).getTime();
+        if (lockAge > LOCK_TIMEOUT_MS) {
+          // Stale lock, remove it
+          fs.unlinkSync(lockPath);
+          continue; // Retry
+        }
+      } catch {
+        // Corrupt lock file, remove it
+        fs.unlinkSync(lockPath);
+        continue; // Retry
+      }
+      // Wait 10ms before retry
+      const { execSync } = require('child_process');
+      execSync('sleep 0.01');
+    }
+  }
+  return false; // Timeout - fail closed
+}
+
+function releaseLock() {
+  try {
+    fs.unlinkSync(runtimePath(QUARANTINE_LOCK_FILE));
+  } catch {
+    // Lock may not exist, ignore
+  }
+}
 
 function readQuarantine() {
   try {
@@ -143,18 +188,37 @@ function isQuarantined(agentId) {
  * If all quarantined, returns null + emits AGENT_QUARANTINE_BLOCKED_ASSIGNMENT.
  */
 function pickAgentSkipQuarantine(candidates, context) {
-  const quarantined = new Set(quarantineList());
-  for (const agent of candidates) {
-    if (!quarantined.has(agent)) {
-      return agent;
-    }
+  // Acquire lock for atomic read + selection
+  if (!acquireLock()) {
+    // Lock timeout - fail closed (treat as all quarantined)
+    emitEvent('AGENT_QUARANTINE_BLOCKED_ASSIGNMENT', {
+      candidates,
+      all_quarantined: true,
+      context: context || null,
+      reason: 'lock_timeout'
+    });
+    return null;
   }
-  emitEvent('AGENT_QUARANTINE_BLOCKED_ASSIGNMENT', {
-    candidates,
-    all_quarantined: true,
-    context: context || null
-  });
-  return null;
+
+  try {
+    const quarantined = new Set(quarantineList());
+    for (const agent of candidates) {
+      if (!quarantined.has(agent)) {
+        releaseLock();
+        return agent;
+      }
+    }
+    emitEvent('AGENT_QUARANTINE_BLOCKED_ASSIGNMENT', {
+      candidates,
+      all_quarantined: true,
+      context: context || null
+    });
+    releaseLock();
+    return null;
+  } catch (e) {
+    releaseLock();
+    throw e;
+  }
 }
 
 // ─── B) Kill Switch ───
@@ -440,6 +504,10 @@ module.exports = {
   isQuarantined,
   pickAgentSkipQuarantine,
   MAX_QUARANTINE_AGENTS,
+  QUARANTINE_LOCK_FILE,
+  LOCK_TIMEOUT_MS,
+  acquireLock,
+  releaseLock,
   // B) Kill switch
   isKillSwitchActive,
   killSwitchEnable,
