@@ -1,0 +1,11 @@
+{
+  "version": "2.0.0",
+  "computed_at": "2025-01-15T12:00:00Z",
+  "hints": [
+    {
+      "objective_id": "obj-42",
+      "rank_delta_hint": 999,
+      "recommendation_code": "INVALID_CODE"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{"event":"DELIVERY_FAILED","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T01:30:00Z","reason":"test_failure"}
+{"event":"DELIVERY_FAILED","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T02:00:00Z","reason":"test_failure"}
+{"event":"DELIVERY_FAILED","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T03:00:00Z","reason":"merge_conflict"}
+{"event":"DELIVERY_RETRY","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T02:10:00Z","attempt":2}
+{"event":"DELIVERY_RETRY","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T02:30:00Z","attempt":3}
+{"event":"DELIVERY_RETRY","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T03:10:00Z","attempt":4}
+{"event":"BUDGET_BREACH","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T01:00:00Z","budget_type":"context","usage":105000,"limit":100000}
+{"event":"BUDGET_NEAR_BREACH","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T01:05:00Z","budget_type":"cost","usage":4.8,"limit":5.0}
+{"event":"MODEL_ESCALATION_BLOCKED","objective_id":"obj-42","agent_id":"builder","timestamp":"2026-02-10T01:10:00Z","from":"haiku","to":"opus","reason":"budget_exceeded"}
+{"event":"ARBITRATION_BLOCKED","objective_id":"obj-43","agent_id":"executor","timestamp":"2026-02-10T02:30:00Z","lock_id":"repo_branch:LucraLab/openclaw-control@main","holder_pid":"12345","holder_agent":"builder"}
+{"event":"ARBITRATION_BLOCKED","objective_id":"obj-43","agent_id":"executor","timestamp":"2026-02-10T02:31:00Z","lock_id":"repo_branch:LucraLab/openclaw-control@main","holder_pid":"12345","holder_agent":"builder"}
+{"event":"DELIVERY_FAILED","objective_id":"obj-46","agent_id":"executor","timestamp":"2026-02-10T05:00:00Z","reason":"merge_conflict"}
+{"event":"ARBITRATION_BLOCKED","objective_id":"obj-45","agent_id":"auditor","timestamp":"2026-02-10T04:00:00Z","lock_id":"repo_branch:LucraLab/other@dev","holder_pid":"9999","holder_agent":"executor"}
+{"event":"BUDGET_BREACH","objective_id":"obj-43","agent_id":"executor","timestamp":"2026-02-10T02:00:00Z","budget_type":"cost","usage":6.2,"limit":5.0}

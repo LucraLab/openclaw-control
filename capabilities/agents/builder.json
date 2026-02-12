@@ -1,0 +1,45 @@
+{
+  "agent_id": "builder",
+  "description": "Fullstack/platform builder agent — implements features, writes code and tests",
+  "models_allowed": [
+    "claude-sonnet-4-5",
+    "claude-haiku-4-5"
+  ],
+  "models_denied": [],
+  "tools_allowed": [
+    "read",
+    "write",
+    "edit",
+    "glob",
+    "grep",
+    "bash",
+    "notebook_edit"
+  ],
+  "tools_denied": [
+    "deploy",
+    "firewall",
+    "rotate_credentials"
+  ],
+  "side_effect_approval_required": [
+    "send",
+    "deploy",
+    "delete",
+    "rotate",
+    "firewall"
+  ],
+  "write_allow": [
+    "scripts/",
+    "docs/",
+    "plans/",
+    "capabilities/",
+    "tmp/",
+    "skills/",
+    "registry/"
+  ],
+  "write_deny": [
+    ".env",
+    "credentials/",
+    "secrets/",
+    ".github/workflows/"
+  ]
+}

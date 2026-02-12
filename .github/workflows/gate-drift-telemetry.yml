@@ -1,0 +1,35 @@
+name: Drift Telemetry
+
+on:
+  pull_request:
+
+jobs:
+  drift-telemetry:
+    name: drift-telemetry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run drift telemetry tests
+        run: node scripts/drift_telemetry.test.js
+
+      - name: Run drift telemetry gate
+        run: node scripts/run_drift_telemetry_gate.js --ci
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-telemetry-report
+          path: |
+            tmp/drift-telemetry-report.json
+            tmp/drift-telemetry-report.md
+            artifacts/drift-telemetry-report.json
+            artifacts/drift-telemetry-report.md
+          retention-days: 30

@@ -1,0 +1,34 @@
+name: Executive Strategy
+on:
+  pull_request:
+
+jobs:
+  executive-strategy:
+    name: executive-strategy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run executive strategy tests
+        run: node scripts/executive_strategy.test.js
+
+      - name: Run executive strategy gate
+        run: node scripts/run_executive_strategy_gate.js --ci
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: executive-strategy-report
+          path: |
+            tmp/executive-strategy-report.json
+            tmp/executive-strategy-report.md
+            artifacts/executive-strategy-report.json
+            artifacts/executive-strategy-report.md
+          retention-days: 30

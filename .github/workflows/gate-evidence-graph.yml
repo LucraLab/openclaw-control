@@ -1,0 +1,33 @@
+name: Evidence Graph
+on:
+  pull_request:
+
+jobs:
+  evidence-graph:
+    name: evidence-graph
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run evidence graph tests
+        run: node scripts/evidence_graph.test.js
+
+      - name: Run evidence graph gate
+        run: node scripts/run_evidence_graph_gate.js --ci
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-graph-report
+          path: |
+            tmp/evidence-graph-gate-report.json
+            artifacts/executive-evidence-graph.json
+            artifacts/executive-evidence-graph.md
+          retention-days: 30
