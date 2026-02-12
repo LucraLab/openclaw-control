@@ -2,15 +2,6 @@ name: Wiring Contract
 
 on:
   pull_request:
-    paths:
-      - 'scripts/wiring_contract.test.js'
-      - 'scripts/autonomy_runtime.js'
-      - 'scripts/killswitch.js'
-      - 'scripts/quarantine_agent.js'
-      - 'scripts/spend_alert.js'
-      - 'scripts/canonical_artifact.js'
-      - 'docs/AUTONOMY_RUNTIME_WIRING.md'
-      - '.github/workflows/gate-wiring-contract.yml'
 
 jobs:
   wiring-contract:

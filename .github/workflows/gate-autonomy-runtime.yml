@@ -1,14 +1,6 @@
 name: Autonomy Runtime v1
 on:
   pull_request:
-    paths:
-      - 'scripts/autonomy_runtime.js'
-      - 'scripts/autonomy_runtime.test.js'
-      - 'scripts/quarantine_agent.js'
-      - 'scripts/killswitch.js'
-      - 'scripts/spend_alert.js'
-      - 'scripts/canonical_artifact.js'
-      - '.github/workflows/gate-autonomy-runtime.yml'
 
 jobs:
   autonomy-runtime-v1:
