@@ -37,6 +37,11 @@ SECRET_PATTERN='(API_KEY|APIKEY|_KEY$|TOKEN|SECRET|PASSWORD|PASSWD|AUTH_|BEARER|
 # Pre-commit safety patterns (matching gate-publicsafe)
 UNSAFE_PATTERNS='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|hstgr\.cloud|srv[0-9]+|ssh\s+\w+@|BEGIN.*PRIVATE.*KEY|sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16})'
 
+# --- Source shared libraries ---
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${_SCRIPT_DIR}/lib/oc_paths.sh"
+source "${_SCRIPT_DIR}/lib/oc_events.sh"
+
 # --- Parse arguments ---
 OBJ_ID=""
 TASK_KEY=""
@@ -56,44 +61,6 @@ while [ $# -gt 0 ]; do
     *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
   esac
 done
-
-# --- Helper: emit event ---
-emit_event() {
-  local event_name="$1"
-  shift
-  local extra_fields="$*"
-
-  [ -d "$(dirname "$EVENTS_LOG")" ] || return 0
-
-  local seq_file="$DELIVERY_OS_HOME/_logs/event-seq.txt"
-  local seq=1
-  if [ -f "$seq_file" ]; then
-    seq=$(cat "$seq_file" 2>/dev/null || echo "0")
-    seq=$((seq + 1))
-  fi
-  echo "$seq" > "$seq_file"
-
-  local ts
-  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-  python3 -c "
-import json
-evt = {
-    'event_seq': $seq,
-    'event': '$event_name',
-    'timestamp': '$ts',
-    'objective_id': '${OBJ_ID:-unknown}',
-    'task_key': '${TASK_KEY:-unknown}',
-    'repo': '${REPO:-unknown}'
-}
-# Parse extra fields (key=value pairs)
-for pair in '''$extra_fields'''.split():
-    if '=' in pair:
-        k, v = pair.split('=', 1)
-        evt[k] = v
-print(json.dumps(evt))
-" >> "$EVENTS_LOG" 2>/dev/null
-}
 
 # --- Close-check mode ---
 if [ "$CLOSE_CHECK" = "true" ]; then
@@ -182,6 +149,12 @@ done
 if [ "$REPO_OK" = "false" ]; then
   echo "REFUSED: Repository '$REPO' is not in the allowlist. Allowed: $ALLOWED_REPOS" >&2
   emit_event "DELIVERY_REFUSED" "reason=repo_not_allowed"
+  exit 1
+fi
+
+# Validate OBJ_ID format (path traversal protection)
+if ! oc_validate_obj_id "$OBJ_ID"; then
+  echo "REFUSED: Invalid objective ID format: '$OBJ_ID'" >&2
   exit 1
 fi
 

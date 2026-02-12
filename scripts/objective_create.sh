@@ -33,6 +33,11 @@ ALLOWED_REPOS="LucraLab/openclaw-control"
 # Allowed types (must match objective templates)
 ALLOWED_TYPES="feature_small_cli ops_hardening validator_or_ci_gate docs_only_change"
 
+# --- Source shared libraries ---
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${_SCRIPT_DIR}/lib/oc_paths.sh"
+source "${_SCRIPT_DIR}/lib/oc_events.sh"
+
 # --- Parse arguments ---
 OBJ_TYPE=""
 OBJ_REPO=""
@@ -174,35 +179,8 @@ chmod 600 "$TMP_FILE"
 mv "$TMP_FILE" "$OBJ_FILE"
 
 # --- Emit event ---
-if [ -d "$(dirname "$EVENTS_LOG")" ]; then
-  # Get next event_seq
-  SEQ_FILE="$DELIVERY_OS_HOME/_logs/event-seq.txt"
-  if [ -f "$SEQ_FILE" ]; then
-    SEQ=$(cat "$SEQ_FILE" 2>/dev/null || echo "0")
-    SEQ=$((SEQ + 1))
-  else
-    SEQ=1
-  fi
-  echo "$SEQ" > "$SEQ_FILE"
-
-  EVENT=$(python3 -c "
-import json
-evt = {
-    'event_seq': $SEQ,
-    'event': 'DELIVERY_OBJECTIVE_CREATED',
-    'timestamp': '$TIMESTAMP',
-    'objective_id': '$OBJ_ID',
-    'objective_type': '$OBJ_TYPE',
-    'repo': '$OBJ_REPO',
-    'risk': '$OBJ_RISK',
-    'created_by': 'delivery_loop_v1'
-}
-print(json.dumps(evt))
-" 2>/dev/null)
-  if [ -n "$EVENT" ]; then
-    echo "$EVENT" >> "$EVENTS_LOG"
-  fi
-fi
+REPO="$OBJ_REPO"
+emit_event "DELIVERY_OBJECTIVE_CREATED" "objective_type=$OBJ_TYPE" "risk=$OBJ_RISK" "created_by=delivery_loop_v1"
 
 # Print the created objective
 echo "$OBJ_JSON"

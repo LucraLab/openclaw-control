@@ -1,0 +1,33 @@
+name: Isolation Guard
+
+on:
+  pull_request:
+
+jobs:
+  isolation-guard:
+    name: isolation-guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run isolation guard tests
+        run: node scripts/isolation_guard.test.js
+
+      - name: Run isolation guard gate
+        run: node scripts/run_isolation_guard_gate.js --ci
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolation-guard-report
+          path: |
+            tmp/isolation-guard-report.json
+            tmp/isolation-guard-report.md
+          retention-days: 30

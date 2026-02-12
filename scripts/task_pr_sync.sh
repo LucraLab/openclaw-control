@@ -28,6 +28,11 @@ GH_MOCK="${GH_MOCK:-0}"
 # Required CI checks
 REQUIRED_CHECKS="scan-secrets scan-public-safe qa-gate"
 
+# --- Source shared libraries ---
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${_SCRIPT_DIR}/lib/oc_paths.sh"
+source "${_SCRIPT_DIR}/lib/oc_events.sh"
+
 # --- Parse arguments ---
 OBJ_ID=""
 TASKS_FILE=""
@@ -51,36 +56,6 @@ fi
 if [ ! -f "$TASKS_FILE" ]; then
   echo "ERROR: Tasks file not found: $TASKS_FILE" >&2; exit 1
 fi
-
-# --- Helper: emit event ---
-emit_event() {
-  local event_name="$1"
-  shift
-  [ -d "$(dirname "$EVENTS_LOG")" ] || return 0
-
-  local seq_file="$DELIVERY_OS_HOME/_logs/event-seq.txt"
-  local seq=1
-  if [ -f "$seq_file" ]; then
-    seq=$(cat "$seq_file" 2>/dev/null || echo "0")
-    seq=$((seq + 1))
-  fi
-  echo "$seq" > "$seq_file"
-
-  python3 -c "
-import json
-evt = {
-    'event_seq': $seq,
-    'event': '$event_name',
-    'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
-    'objective_id': '$OBJ_ID'
-}
-for pair in '''$*'''.split():
-    if '=' in pair:
-        k, v = pair.split('=', 1)
-        evt[k] = v
-print(json.dumps(evt))
-" >> "$EVENTS_LOG" 2>/dev/null
-}
 
 # --- Process each task with a PR ---
 echo "=== task_pr_sync.sh ==="
