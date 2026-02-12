@@ -17,12 +17,12 @@
 # Environment:
 #   GH_MOCK — Set to 1 for test mode
 #   DELIVERY_OS_HOME — Path to Delivery OS store
+#   OC_AGENT_ID     — Required. Must be: builder|executor|auditor
 #
 set -uo pipefail
 
 # --- Configuration ---
 DELIVERY_OS_HOME="${DELIVERY_OS_HOME:-$HOME/.openclaw}"
-EVENTS_LOG="$DELIVERY_OS_HOME/_logs/agent-events.jsonl"
 GH_MOCK="${GH_MOCK:-0}"
 
 # Required CI checks
@@ -32,6 +32,9 @@ REQUIRED_CHECKS="scan-secrets scan-public-safe qa-gate"
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${_SCRIPT_DIR}/lib/oc_paths.sh"
 source "${_SCRIPT_DIR}/lib/oc_events.sh"
+
+# --- Require agent identity (Layer 4 isolation) ---
+oc_require_agent_id || exit 1
 
 # --- Parse arguments ---
 OBJ_ID=""
@@ -61,6 +64,7 @@ fi
 echo "=== task_pr_sync.sh ==="
 echo "Objective: $OBJ_ID"
 echo "Tasks file: $TASKS_FILE"
+echo "Agent: $OC_AGENT_ID"
 echo ""
 
 TRANSITIONS=$(python3 << 'PYEOF'

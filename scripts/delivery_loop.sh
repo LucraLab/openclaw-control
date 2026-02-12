@@ -10,6 +10,7 @@
 #
 # Environment:
 #   DELIVERY_OS_HOME — Path to Delivery OS store (default: ~/.openclaw)
+#   OC_AGENT_ID     — Required. Must be: builder|executor|auditor
 #   GH_MOCK — Set to 1 for test mode (uses mock gh)
 #
 # Exit codes:
@@ -21,8 +22,6 @@ set -uo pipefail
 
 # --- Configuration ---
 DELIVERY_OS_HOME="${DELIVERY_OS_HOME:-$HOME/.openclaw}"
-OBJECTIVES_DIR="$DELIVERY_OS_HOME/objectives"
-EVENTS_LOG="$DELIVERY_OS_HOME/_logs/agent-events.jsonl"
 GH_MOCK="${GH_MOCK:-0}"
 
 # Allowed repos (v1: hard-coded single repo)
@@ -41,6 +40,14 @@ UNSAFE_PATTERNS='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|hstgr\.cloud|sr
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${_SCRIPT_DIR}/lib/oc_paths.sh"
 source "${_SCRIPT_DIR}/lib/oc_events.sh"
+
+# --- Require agent identity (Layer 4 isolation) ---
+oc_require_agent_id || exit 1
+OC_AGENT_ROOT="$(oc_agent_root)"
+OBJECTIVES_DIR="$OC_AGENT_ROOT/objectives"
+
+# Legacy path constant for migration
+_LEGACY_OBJECTIVES_DIR="$DELIVERY_OS_HOME/objectives"
 
 # --- Parse arguments ---
 OBJ_ID=""
@@ -68,6 +75,13 @@ if [ "$CLOSE_CHECK" = "true" ]; then
     echo "ERROR: --close-check requires --objective" >&2
     exit 1
   fi
+
+  # Ensure agent-scoped directories exist
+  mkdir -p "$OBJECTIVES_DIR"
+
+  # Migrate legacy files if needed (Option A: safe one-time migration)
+  oc_migrate_legacy_file "$_LEGACY_OBJECTIVES_DIR/${OBJ_ID}.json" "$OBJECTIVES_DIR/${OBJ_ID}.json" || exit 1
+  oc_migrate_legacy_file "$_LEGACY_OBJECTIVES_DIR/${OBJ_ID}-tasks.json" "$OBJECTIVES_DIR/${OBJ_ID}-tasks.json" || exit 1
 
   OBJ_FILE="$OBJECTIVES_DIR/${OBJ_ID}.json"
   TASKS_FILE="$OBJECTIVES_DIR/${OBJ_ID}-tasks.json"
@@ -167,6 +181,13 @@ if [ "$GH_MOCK" != "1" ]; then
   fi
 fi
 
+# Ensure agent-scoped directories exist
+mkdir -p "$OBJECTIVES_DIR"
+
+# Migrate legacy objective file if needed (Option A: safe one-time migration)
+oc_migrate_legacy_file "$_LEGACY_OBJECTIVES_DIR/${OBJ_ID}.json" "$OBJECTIVES_DIR/${OBJ_ID}.json" || exit 1
+oc_migrate_legacy_file "$_LEGACY_OBJECTIVES_DIR/${OBJ_ID}-tasks.json" "$OBJECTIVES_DIR/${OBJ_ID}-tasks.json" || exit 1
+
 # Check objective exists
 OBJ_FILE="$OBJECTIVES_DIR/${OBJ_ID}.json"
 if [ ! -f "$OBJ_FILE" ]; then
@@ -196,6 +217,7 @@ if [ "$DRY_RUN" = "true" ]; then
   echo "  Repo: $REPO"
   echo "  Risk: $OBJ_RISK"
   echo "  Branch: $BRANCH_NAME"
+  echo "  Agent: $OC_AGENT_ID (root: $OC_AGENT_ROOT)"
   echo "  Would create branch, apply changes, run local checks, open PR"
   echo "  Would request CODEOWNERS review"
   echo "  Skipping all write operations (dry-run mode)"
@@ -208,10 +230,16 @@ echo "Objective: $OBJ_ID"
 echo "Task: $TASK_KEY"
 echo "Repo: $REPO"
 echo "Risk: $OBJ_RISK"
+echo "Agent: $OC_AGENT_ID"
 echo ""
 
-# Step 1: Clone/update repo
-WORK_DIR="${DELIVERY_OS_HOME}/workspaces/${REPO##*/}"
+# Step 1: Clone/update repo (agent-scoped workspace)
+WORK_DIR="${OC_AGENT_ROOT}/workspaces/${REPO##*/}"
+_LEGACY_WORK_DIR="${DELIVERY_OS_HOME}/workspaces/${REPO##*/}"
+
+# Migrate legacy workspace if needed
+oc_migrate_legacy_file "$_LEGACY_WORK_DIR" "$WORK_DIR" || exit 1
+
 if [ -d "$WORK_DIR/.git" ]; then
   echo "Step 1: Updating existing clone..."
   cd "$WORK_DIR"

@@ -5,7 +5,8 @@
  * Usage: node scripts/isolation_guard.test.js
  * Exit 0 = all tests pass, Exit 1 = failures
  *
- * Tests: oc_paths.sh, oc_events.sh, oc_atomic_json.py, script modifications
+ * Tests: oc_paths.sh, oc_events.sh, oc_atomic_json.py, script modifications,
+ *        agent-scoped path migration (Port #7)
  */
 
 'use strict';
@@ -47,6 +48,23 @@ function bashPaths(snippet) {
     return { stdout, exitCode: 0 };
   } catch (e) {
     return { stdout: (e.stdout || '').trim(), exitCode: e.status || 1 };
+  }
+}
+
+/**
+ * Run a bash snippet that sources both oc_paths.sh and oc_events.sh.
+ */
+function bashBoth(snippet, env) {
+  const cmd = `bash -c 'source "${LIB_DIR}/oc_paths.sh" && source "${LIB_DIR}/oc_events.sh" && ${snippet}'`;
+  try {
+    const stdout = execSync(cmd, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, ...env }
+    }).trim();
+    return { stdout, exitCode: 0 };
+  } catch (e) {
+    return { stdout: (e.stdout || '').trim(), stderr: (e.stderr || '').trim(), exitCode: e.status || 1 };
   }
 }
 
@@ -327,6 +345,283 @@ test('IG-T25: oc_agent_root prints correct path', () => {
   assert(
     r.stdout === '/tmp/test-home/agents/builder',
     `expected /tmp/test-home/agents/builder, got ${r.stdout}`
+  );
+});
+
+// ─── Section 9: Port #7 — oc_require_agent_id ───
+
+test('IG-T26: oc_require_agent_id succeeds with valid OC_AGENT_ID', () => {
+  const r = bashPaths('OC_AGENT_ID=executor oc_require_agent_id');
+  assert(r.exitCode === 0, `expected exit 0, got ${r.exitCode}`);
+});
+
+test('IG-T27: oc_require_agent_id fails with empty OC_AGENT_ID', () => {
+  const r = bashPaths('unset OC_AGENT_ID; oc_require_agent_id');
+  assert(r.exitCode !== 0, `expected non-zero exit, got ${r.exitCode}`);
+});
+
+test('IG-T28: oc_require_agent_id fails with invalid OC_AGENT_ID', () => {
+  const r = bashPaths('OC_AGENT_ID=hacker oc_require_agent_id');
+  assert(r.exitCode !== 0, `expected non-zero exit, got ${r.exitCode}`);
+});
+
+// ─── Section 10: Port #7 — oc_migrate_legacy_file ───
+
+test('IG-T29: migrate — legacy only → moves to agent path', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ig-migrate-'));
+  const logsDir = path.join(tmpDir, '_logs');
+  fs.mkdirSync(logsDir, { recursive: true });
+  const legacy = path.join(tmpDir, 'legacy.json');
+  const target = path.join(tmpDir, 'agent', 'target.json');
+  fs.writeFileSync(legacy, '{"migrated":true}');
+  try {
+    const env = {
+      DELIVERY_OS_HOME: tmpDir,
+      OC_AGENT_ID: 'builder',
+      PATH: process.env.PATH,
+      HOME: process.env.HOME
+    };
+    const r = bashBoth(`oc_migrate_legacy_file "${legacy}" "${target}"`, env);
+    assert(r.exitCode === 0, `expected exit 0, got ${r.exitCode}`);
+    assert(!fs.existsSync(legacy), 'legacy file should be gone');
+    assert(fs.existsSync(target), 'target file should exist');
+    const data = JSON.parse(fs.readFileSync(target, 'utf8'));
+    assert(data.migrated === true, 'data should be preserved');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('IG-T30: migrate — agent only → no-op (already migrated)', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ig-migrate-'));
+  const legacy = path.join(tmpDir, 'legacy.json');
+  const agentDir = path.join(tmpDir, 'agent');
+  fs.mkdirSync(agentDir, { recursive: true });
+  const target = path.join(agentDir, 'target.json');
+  fs.writeFileSync(target, '{"existing":true}');
+  // legacy does NOT exist
+  try {
+    const r = bashPaths(`oc_migrate_legacy_file "${legacy}" "${target}"`);
+    assert(r.exitCode === 0, `expected exit 0, got ${r.exitCode}`);
+    assert(fs.existsSync(target), 'target should still exist');
+    const data = JSON.parse(fs.readFileSync(target, 'utf8'));
+    assert(data.existing === true, 'target data unchanged');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('IG-T31: migrate — neither exists → no-op', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ig-migrate-'));
+  const legacy = path.join(tmpDir, 'nope-legacy.json');
+  const target = path.join(tmpDir, 'nope-agent.json');
+  try {
+    const r = bashPaths(`oc_migrate_legacy_file "${legacy}" "${target}"`);
+    assert(r.exitCode === 0, `expected exit 0, got ${r.exitCode}`);
+    assert(!fs.existsSync(legacy), 'legacy should not exist');
+    assert(!fs.existsSync(target), 'target should not exist');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('IG-T32: migrate — both exist → conflict, fail closed', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ig-migrate-'));
+  const legacy = path.join(tmpDir, 'legacy.json');
+  const agentDir = path.join(tmpDir, 'agent');
+  fs.mkdirSync(agentDir, { recursive: true });
+  const target = path.join(agentDir, 'target.json');
+  fs.writeFileSync(legacy, '{"from":"legacy"}');
+  fs.writeFileSync(target, '{"from":"agent"}');
+  try {
+    const r = bashPaths(`oc_migrate_legacy_file "${legacy}" "${target}"`);
+    assert(r.exitCode !== 0, `expected non-zero exit (conflict), got ${r.exitCode}`);
+    // Both files should be untouched
+    assert(fs.existsSync(legacy), 'legacy should still exist');
+    assert(fs.existsSync(target), 'target should still exist');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('IG-T33: migrate — emits PATH_MIGRATION event', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ig-migrate-evt-'));
+  const logsDir = path.join(tmpDir, '_logs');
+  fs.mkdirSync(logsDir, { recursive: true });
+  const legacy = path.join(tmpDir, 'legacy-evt.json');
+  const target = path.join(tmpDir, 'agent', 'target-evt.json');
+  fs.writeFileSync(legacy, '{"test":"migration_event"}');
+  try {
+    const env = {
+      DELIVERY_OS_HOME: tmpDir,
+      OBJ_ID: 'obj-test-migrate',
+      OC_AGENT_ID: 'executor',
+      PATH: process.env.PATH,
+      HOME: process.env.HOME
+    };
+    const r = bashBoth(`oc_migrate_legacy_file "${legacy}" "${target}"`, env);
+    assert(r.exitCode === 0, `expected exit 0, got ${r.exitCode}`);
+    const logFile = path.join(logsDir, 'agent-events.jsonl');
+    assert(fs.existsSync(logFile), 'event log should exist after migration');
+    const line = fs.readFileSync(logFile, 'utf8').trim();
+    const evt = JSON.parse(line);
+    assert(evt.event === 'PATH_MIGRATION', `expected PATH_MIGRATION, got ${evt.event}`);
+    assert(evt.from_type === 'legacy', `expected from_type=legacy, got ${evt.from_type}`);
+    assert(evt.to_type === 'agent_scoped', `expected to_type=agent_scoped, got ${evt.to_type}`);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+// ─── Section 11: Port #7 — Agent-scoped paths in production scripts ───
+
+test('IG-T34: delivery_loop.sh uses OC_AGENT_ROOT for OBJECTIVES_DIR', () => {
+  const script = fs.readFileSync(
+    path.join(REPO_ROOT, 'scripts', 'delivery_loop.sh'), 'utf8'
+  );
+  assert(
+    script.includes('OBJECTIVES_DIR="$OC_AGENT_ROOT/objectives"'),
+    'delivery_loop.sh OBJECTIVES_DIR must use $OC_AGENT_ROOT'
+  );
+  // Must NOT use legacy shared path for OBJECTIVES_DIR
+  assert(
+    !script.match(/^OBJECTIVES_DIR="\$DELIVERY_OS_HOME\/objectives"/m),
+    'delivery_loop.sh must NOT set OBJECTIVES_DIR to $DELIVERY_OS_HOME/objectives'
+  );
+});
+
+test('IG-T35: delivery_loop.sh uses OC_AGENT_ROOT for WORK_DIR', () => {
+  const script = fs.readFileSync(
+    path.join(REPO_ROOT, 'scripts', 'delivery_loop.sh'), 'utf8'
+  );
+  assert(
+    script.includes('WORK_DIR="${OC_AGENT_ROOT}/workspaces/'),
+    'delivery_loop.sh WORK_DIR must use $OC_AGENT_ROOT'
+  );
+  // Must NOT use legacy shared path for WORK_DIR (exclude _LEGACY_ prefix)
+  assert(
+    !script.match(/(?<![A-Za-z_])WORK_DIR="\$\{DELIVERY_OS_HOME\}\/workspaces\//),
+    'delivery_loop.sh must NOT set WORK_DIR to $DELIVERY_OS_HOME/workspaces/'
+  );
+});
+
+test('IG-T36: objective_create.sh uses OC_AGENT_ROOT for OBJECTIVES_DIR', () => {
+  const script = fs.readFileSync(
+    path.join(REPO_ROOT, 'scripts', 'objective_create.sh'), 'utf8'
+  );
+  assert(
+    script.includes('OBJECTIVES_DIR="$OC_AGENT_ROOT/objectives"'),
+    'objective_create.sh OBJECTIVES_DIR must use $OC_AGENT_ROOT'
+  );
+  assert(
+    !script.match(/^OBJECTIVES_DIR="\$DELIVERY_OS_HOME\/objectives"/m),
+    'objective_create.sh must NOT set OBJECTIVES_DIR to $DELIVERY_OS_HOME/objectives'
+  );
+});
+
+test('IG-T37: staging_smoke.sh uses OC_AGENT_ROOT for objective paths', () => {
+  const script = fs.readFileSync(
+    path.join(REPO_ROOT, 'scripts', 'staging_smoke.sh'), 'utf8'
+  );
+  assert(
+    script.includes('OC_AGENT_ROOT'),
+    'staging_smoke.sh must reference OC_AGENT_ROOT'
+  );
+  // Must NOT use $DELIVERY_OS_HOME/objectives directly for writes
+  assert(
+    !script.match(/OBJ_FILE="\$DELIVERY_OS_HOME\/objectives/),
+    'staging_smoke.sh must NOT set OBJ_FILE to $DELIVERY_OS_HOME/objectives'
+  );
+});
+
+test('IG-T38: all production scripts call oc_require_agent_id', () => {
+  const scripts = [
+    'delivery_loop.sh',
+    'objective_create.sh',
+    'staging_smoke.sh',
+    'task_pr_sync.sh'
+  ];
+  for (const s of scripts) {
+    const script = fs.readFileSync(
+      path.join(REPO_ROOT, 'scripts', s), 'utf8'
+    );
+    assert(
+      script.includes('oc_require_agent_id'),
+      `${s} must call oc_require_agent_id`
+    );
+  }
+});
+
+// ─── Section 12: Port #7 — No legacy path writes ───
+
+test('IG-T39: no production script writes to $DELIVERY_OS_HOME/objectives directly', () => {
+  const scripts = [
+    'delivery_loop.sh',
+    'objective_create.sh',
+    'staging_smoke.sh',
+    'task_pr_sync.sh'
+  ];
+  for (const s of scripts) {
+    const content = fs.readFileSync(
+      path.join(REPO_ROOT, 'scripts', s), 'utf8'
+    );
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Skip comments and legacy constant definitions used for migration
+      if (line.trim().startsWith('#')) continue;
+      if (line.includes('_LEGACY_')) continue;
+      // Check for direct assignment of OBJECTIVES_DIR to legacy path
+      if (/^OBJECTIVES_DIR=.*\$DELIVERY_OS_HOME\/objectives/.test(line.trim())) {
+        throw new Error(`${s}:${i + 1} writes OBJECTIVES_DIR to legacy path: ${line.trim()}`);
+      }
+    }
+  }
+});
+
+test('IG-T40: no production script writes to $DELIVERY_OS_HOME/workspaces directly', () => {
+  const scripts = [
+    'delivery_loop.sh',
+    'objective_create.sh',
+    'staging_smoke.sh',
+    'task_pr_sync.sh'
+  ];
+  for (const s of scripts) {
+    const content = fs.readFileSync(
+      path.join(REPO_ROOT, 'scripts', s), 'utf8'
+    );
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.trim().startsWith('#')) continue;
+      if (line.includes('_LEGACY_')) continue;
+      // Check for WORK_DIR pointing to legacy workspace
+      if (/^WORK_DIR=.*\$\{?DELIVERY_OS_HOME\}?\/workspaces/.test(line.trim())) {
+        throw new Error(`${s}:${i + 1} writes WORK_DIR to legacy path: ${line.trim()}`);
+      }
+    }
+  }
+});
+
+// ─── Section 13: Port #7 — Migration calls present ───
+
+test('IG-T41: delivery_loop.sh calls oc_migrate_legacy_file', () => {
+  const script = fs.readFileSync(
+    path.join(REPO_ROOT, 'scripts', 'delivery_loop.sh'), 'utf8'
+  );
+  assert(
+    script.includes('oc_migrate_legacy_file'),
+    'delivery_loop.sh must call oc_migrate_legacy_file for backward compat'
+  );
+});
+
+test('IG-T42: staging_smoke.sh calls oc_migrate_legacy_file', () => {
+  const script = fs.readFileSync(
+    path.join(REPO_ROOT, 'scripts', 'staging_smoke.sh'), 'utf8'
+  );
+  assert(
+    script.includes('oc_migrate_legacy_file'),
+    'staging_smoke.sh must call oc_migrate_legacy_file for backward compat'
   );
 });
 

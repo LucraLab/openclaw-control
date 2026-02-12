@@ -9,13 +9,15 @@ All libraries live in `scripts/lib/`.
 
 | Library | Purpose |
 |---------|---------|
-| `oc_paths.sh` | Agent ID validation, objective ID validation, safe path join, repo allowlist |
+| `oc_paths.sh` | Agent ID validation, objective ID validation, safe path join, repo allowlist, migration |
 | `oc_events.sh` | Single `emit_event()` implementation (replaces 4 inline copies) |
 | `oc_atomic_json.py` | Atomic JSON write with root containment check |
 
 ## Agent Identity
 
-Scripts accept `OC_AGENT_ID` via environment variable.
+Scripts **require** `OC_AGENT_ID` via environment variable. All production
+scripts call `oc_require_agent_id` and exit 1 if the variable is missing
+or invalid.
 
 | Value | Role |
 |-------|------|
@@ -24,21 +26,50 @@ Scripts accept `OC_AGENT_ID` via environment variable.
 | `auditor` | Observes events, generates reports |
 
 When set, `agent_id` is included in every emitted event.
-When unset, defaults to `unknown` (backward compatible with existing tests).
 
-## Agent-Scoped Root
+## Agent-Scoped Root (Layer 4 Isolation)
+
+All objectives and workspaces are stored under the agent-scoped root:
 
 ```
 $DELIVERY_OS_HOME/agents/$OC_AGENT_ID/
+  objectives/       ← objective JSON files
+  workspaces/        ← git clones
 ```
 
 Resolved via `oc_agent_root`. Fails if `OC_AGENT_ID` is invalid.
+
+### Path Layout
+
+| Path | Purpose |
+|------|---------|
+| `$OC_AGENT_ROOT/objectives/` | Objective JSON and task files |
+| `$OC_AGENT_ROOT/workspaces/` | Git clones for delivery branches |
+| `$DELIVERY_OS_HOME/_logs/` | Shared event log (cross-agent) |
+
+### Legacy Path Migration (Option A)
+
+Prior to Port #7, objectives and workspaces were stored in shared paths:
+
+- `$DELIVERY_OS_HOME/objectives/` (legacy)
+- `$DELIVERY_OS_HOME/workspaces/` (legacy)
+
+Production scripts now automatically migrate legacy files to agent-scoped
+paths on first access via `oc_migrate_legacy_file`:
+
+1. If agent-scoped file exists and legacy doesn't → no-op (already migrated)
+2. If legacy exists and agent-scoped doesn't → `mv` to agent path + emit `PATH_MIGRATION` event
+3. If both exist → **fail closed** (conflict; manual resolution required)
+4. If neither exists → no-op (new file)
+
+Legacy paths are **never written to** by production scripts.
 
 ## Path Validation
 
 ### Objective ID
 
 `oc_validate_obj_id` requires:
+
 - Starts with `obj-`
 - Contains only `[a-zA-Z0-9_-]`
 - No `..`, `/`, `\`, or control characters
@@ -55,7 +86,7 @@ within `<root>`. Rejects `../` traversal before and after resolution.
 
 ## Centralized Event Emission
 
-All 4 shell scripts now source `scripts/lib/oc_events.sh` instead of
+All 4 shell scripts source `scripts/lib/oc_events.sh` instead of
 defining their own `emit_event()`. The centralized version:
 
 - Maintains monotonic `event_seq` via `_logs/event-seq.txt`
@@ -78,7 +109,7 @@ Exit codes: 0=success, 1=path violation, 2=write error, 3=invalid JSON.
 ## How to run locally
 
 ```bash
-# Run the 25 unit tests
+# Run the 42 unit tests
 node scripts/isolation_guard.test.js
 
 # Run the gate (produces tmp/isolation-guard-report.json)
@@ -90,18 +121,31 @@ node scripts/run_isolation_guard_gate.js
 The gate runs on every pull request via
 `.github/workflows/gate-isolation-guard.yml`. It:
 
-1. Runs 25 unit + integration tests
-2. Runs 12 smoke checks
+1. Runs 42 unit + integration tests
+2. Runs 16 smoke checks
 3. Produces `isolation-guard-report.json` and `.md` as artifacts
 
 The check name is `isolation-guard`.
 
 ## Rollback
 
-Revert the merge commit to remove all Port #6 changes:
+Revert the merge commit to remove all Port #7 changes:
+
 ```bash
 git revert <merge_commit_sha>
 ```
 
-No existing test files modified. Shell script changes are minimal
-(source lines added, inline emit_event removed).
+No existing test structure modified. Shell scripts revert to legacy shared
+paths. Migration function remains harmless (no-op when legacy files don't
+exist).
+
+## Lock File Path (Future — Port #8)
+
+With agent-scoped roots, the natural lock file location is:
+
+```
+$OC_AGENT_ROOT/objectives/${OBJ_ID}.lock
+```
+
+This sits alongside the objective JSON and is agent-specific, preventing
+cross-agent lock contention.

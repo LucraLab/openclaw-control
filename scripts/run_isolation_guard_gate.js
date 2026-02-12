@@ -17,6 +17,10 @@
  *  10. no inline emit_event in modified scripts
  *  11. scripts source lib files
  *  12. oc_agent_root resolves correctly
+ *  13. oc_require_agent_id enforced
+ *  14. oc_migrate_legacy_file works
+ *  15. no legacy path writes in production scripts
+ *  16. all scripts use agent-scoped paths
  *
  * Exit 0 = gate pass, Exit 1 = gate fail
  */
@@ -72,7 +76,7 @@ console.log(`  ${new Date().toISOString()}`);
 console.log('============================================');
 console.log('');
 
-// --- Smoke checks ---
+// --- Smoke checks (1-12: existing from Port #6) ---
 
 check('oc_paths_exists', () => {
   assert(fs.existsSync(path.join(LIB_DIR, 'oc_paths.sh')), 'oc_paths.sh missing');
@@ -190,6 +194,78 @@ check('oc_agent_root_resolves', () => {
   );
   assert(r.exitCode === 0, `expected exit 0, got ${r.exitCode}`);
   assert(r.stdout === '/tmp/doh/agents/executor', `expected /tmp/doh/agents/executor, got ${r.stdout}`);
+});
+
+// --- Smoke checks 13-16: Port #7 additions ---
+
+check('oc_require_agent_id_enforced', () => {
+  // Valid
+  const good = bash(`source "${LIB_DIR}/oc_paths.sh" && OC_AGENT_ID=builder oc_require_agent_id`);
+  assert(good.exitCode === 0, 'valid agent should pass');
+  // Missing
+  const bad = bash(`source "${LIB_DIR}/oc_paths.sh" && unset OC_AGENT_ID && oc_require_agent_id`);
+  assert(bad.exitCode !== 0, 'missing agent should fail');
+});
+
+check('oc_migrate_legacy_file_works', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ig-gate-mig-'));
+  const legacy = path.join(tmpDir, 'leg.json');
+  const target = path.join(tmpDir, 'agt', 'tgt.json');
+  fs.writeFileSync(legacy, '{"gate":"migrate"}');
+  try {
+    const r = bash(`source "${LIB_DIR}/oc_paths.sh" && oc_migrate_legacy_file "${legacy}" "${target}"`);
+    assert(r.exitCode === 0, `migration should succeed, got exit ${r.exitCode}`);
+    assert(!fs.existsSync(legacy), 'legacy should be gone');
+    assert(fs.existsSync(target), 'target should exist');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+check('no_legacy_path_writes', () => {
+  const scripts = [
+    'delivery_loop.sh',
+    'objective_create.sh',
+    'staging_smoke.sh',
+    'task_pr_sync.sh'
+  ];
+  for (const s of scripts) {
+    const content = fs.readFileSync(path.join(REPO_ROOT, 'scripts', s), 'utf8');
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.trim().startsWith('#')) continue;
+      if (line.includes('_LEGACY_')) continue;
+      if (/^OBJECTIVES_DIR=.*\$DELIVERY_OS_HOME\/objectives/.test(line.trim())) {
+        throw new Error(`${s}:${i + 1} has legacy OBJECTIVES_DIR`);
+      }
+      if (/^WORK_DIR=.*\$\{?DELIVERY_OS_HOME\}?\/workspaces/.test(line.trim())) {
+        throw new Error(`${s}:${i + 1} has legacy WORK_DIR`);
+      }
+    }
+  }
+});
+
+check('all_scripts_use_agent_scoped_paths', () => {
+  const scripts = [
+    'delivery_loop.sh',
+    'objective_create.sh',
+    'staging_smoke.sh'
+  ];
+  for (const s of scripts) {
+    const content = fs.readFileSync(path.join(REPO_ROOT, 'scripts', s), 'utf8');
+    assert(
+      content.includes('oc_require_agent_id'),
+      `${s} must call oc_require_agent_id`
+    );
+    assert(
+      content.includes('OC_AGENT_ROOT'),
+      `${s} must use OC_AGENT_ROOT`
+    );
+  }
+  // task_pr_sync.sh requires agent_id but doesn't own path writes
+  const tps = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'task_pr_sync.sh'), 'utf8');
+  assert(tps.includes('oc_require_agent_id'), 'task_pr_sync.sh must call oc_require_agent_id');
 });
 
 // --- Report ---
