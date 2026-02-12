@@ -22,6 +22,11 @@ set -uo pipefail
 DELIVERY_OS_HOME="${DELIVERY_OS_HOME:-$HOME/.openclaw}"
 EVENTS_LOG="$DELIVERY_OS_HOME/_logs/agent-events.jsonl"
 
+# --- Source shared libraries ---
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${_SCRIPT_DIR}/lib/oc_paths.sh"
+source "${_SCRIPT_DIR}/lib/oc_events.sh"
+
 # --- Parse arguments ---
 REPO_DIR=""
 DRY_RUN=false
@@ -47,36 +52,6 @@ if [ ! -d "$REPO_DIR" ]; then
 fi
 
 cd "$REPO_DIR"
-
-# --- Helper: emit event ---
-emit_event() {
-  local event_name="$1"
-  shift
-  [ -d "$(dirname "$EVENTS_LOG")" ] || return 0
-
-  local seq_file="$DELIVERY_OS_HOME/_logs/event-seq.txt"
-  local seq=1
-  if [ -f "$seq_file" ]; then
-    seq=$(cat "$seq_file" 2>/dev/null || echo "0")
-    seq=$((seq + 1))
-  fi
-  echo "$seq" > "$seq_file"
-
-  python3 -c "
-import json
-evt = {
-    'event_seq': $seq,
-    'event': '$event_name',
-    'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
-    'objective_id': '$OBJ_ID'
-}
-for pair in '''$*'''.split():
-    if '=' in pair:
-        k, v = pair.split('=', 1)
-        evt[k] = v
-print(json.dumps(evt))
-" >> "$EVENTS_LOG" 2>/dev/null
-}
 
 echo "============================================"
 echo "  Staging Smoke Tests"
