@@ -1,0 +1,76 @@
+name: Autonomy Runtime v1
+on:
+  pull_request:
+    paths:
+      - 'scripts/autonomy_runtime.js'
+      - 'scripts/autonomy_runtime.test.js'
+      - 'scripts/quarantine_agent.js'
+      - 'scripts/killswitch.js'
+      - 'scripts/spend_alert.js'
+      - 'scripts/canonical_artifact.js'
+      - '.github/workflows/gate-autonomy-runtime.yml'
+
+jobs:
+  autonomy-runtime-v1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Autonomy Runtime v1 tests
+        run: node scripts/autonomy_runtime.test.js
+        env:
+          OPENCLAW_RUNTIME_DIR: ${{ runner.temp }}/oc-runtime-test
+
+      - name: Verify fixture-only (no network calls)
+        run: |
+          # Ensure test file has no network imports
+          if grep -qE 'require\(.*(http|https|net|dgram|dns|tls)\b' scripts/autonomy_runtime.test.js; then
+            echo "FAIL: Test file imports network modules"
+            exit 1
+          fi
+          if grep -qE 'require\(.*(http|https|net|dgram|dns|tls)\b' scripts/autonomy_runtime.js; then
+            echo "FAIL: Runtime imports network modules"
+            exit 1
+          fi
+          echo "PASS: No network modules imported"
+
+      - name: Verify no LLM SDK imports in gate
+        run: |
+          # Ensure no require() calls to LLM SDKs or HTTP clients
+          if grep -qE "require\(.*(openai|@anthropic|axios|node-fetch|got)\b" scripts/autonomy_runtime.js scripts/autonomy_runtime.test.js; then
+            echo "FAIL: LLM SDK or HTTP client import detected"
+            exit 1
+          fi
+          echo "PASS: No LLM SDK or HTTP client imports"
+
+      - name: Verify runtime dir is gitignored
+        run: |
+          if grep -q '.openclaw_runtime' .gitignore; then
+            echo "PASS: .openclaw_runtime is gitignored"
+          else
+            echo "FAIL: .openclaw_runtime not in .gitignore"
+            exit 1
+          fi
+
+      - name: Verify canonical artifact naming patterns
+        run: |
+          node -e "
+            const rt = require('./scripts/autonomy_runtime');
+            const dir = require('os').tmpdir() + '/oc-art-check-' + Date.now();
+            process.env.OPENCLAW_RUNTIME_DIR = dir;
+            delete require.cache[require.resolve('./scripts/autonomy_runtime')];
+            const rt2 = require('./scripts/autonomy_runtime');
+            const { jsonPath: jp } = rt2.writeCanonicalArtifact('ops-pulse', { gateway: 'OK' });
+            const { jsonPath: jp2 } = rt2.writeCanonicalArtifact('daily-exec-brief', { objectives_scanned: 0 });
+            const path = require('path');
+            const bn1 = path.basename(jp);
+            const bn2 = path.basename(jp2);
+            if (!bn1.match(/^ops-pulse-.*\.json$/)) { console.error('FAIL: ops-pulse name wrong:', bn1); process.exit(1); }
+            if (!bn2.match(/^daily-exec-brief-.*\.json$/)) { console.error('FAIL: daily-exec-brief name wrong:', bn2); process.exit(1); }
+            console.log('PASS: Canonical naming verified');
+            require('fs').rmSync(dir, { recursive: true, force: true });
+          "
