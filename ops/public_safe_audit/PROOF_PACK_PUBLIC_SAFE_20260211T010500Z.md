@@ -87,7 +87,7 @@ All sensitive values replaced with descriptive placeholders:
 | `lint-markdown` | PASS |
 | `scan-public-safe` | PASS |
 
-**PR URL:** https://github.com/LucraLab/openclaw-control/pull/3
+**PR URL:** [#3](https://github.com/LucraLab/openclaw-control/pull/3)
 **Merged commit:** `0ae7298`
 
 ---

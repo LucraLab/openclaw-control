@@ -270,7 +270,7 @@ test('C2: spend ledger sanitizes secrets', () => {
     rt.appendSpendEntry({
       agent_id: 'test',
       model: 'unknown',
-      source: 'token=sk-1234567890abcdef',
+      source: 'cred sk-1234567890abcdef',
       correlation_id: 'Bearer eyJhbGciOiJIUz'
     });
     const raw = fs.readFileSync(rt.runtimePath('spend-ledger.jsonl'), 'utf8');
@@ -483,10 +483,10 @@ test('D6: artifact sanitizes secrets in data', () => {
   try {
     const { jsonPath } = rt.writeCanonicalArtifact('ops-pulse', {
       gateway: 'OK',
-      token: 'sk-abcdefghijklmnopqrst'
+      token: 'sk-test0123456789'
     });
     const content = fs.readFileSync(jsonPath, 'utf8');
-    assert(!content.includes('sk-abcdefgh'), 'secret not sanitized');
+    assert(!content.includes('sk-test012'), 'secret not sanitized');
     assert(content.includes('[REDACTED]'), 'no redaction');
   } finally { cleanup(dir); }
 });

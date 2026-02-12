@@ -299,7 +299,7 @@ ssh root@srv853172.hstgr.cloud "
 | No secrets in repo or artifacts | YES (W17, W18) |
 | Kill switch defaults to OFF (no behavior change until activated) | YES (W1) |
 | Quarantine defaults to empty (no agents blocked) | YES (W5) |
-| Guard failures cause graceful exit, not crash (`|| true`, `2>/dev/null`) | YES (by spec) |
+| Guard failures cause graceful exit, not crash (uses `\|\| true` / `2>/dev/null`) | YES (by spec) |
 | Monitoring scripts (watchdog, canary) NEVER blocked | YES (not wired) |
 | All changes additive (no existing logic modified in repo) | YES |
 | CI gates count: 7 → 8 (additive +1) | YES |

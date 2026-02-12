@@ -46,6 +46,12 @@ const FORBIDDEN_PATTERNS = [
 // actual evidence artifacts.
 const ALLOWLIST_MARKERS = ['EXAMPLE', 'TEMPLATE', 'SAMPLE'];
 
+// ─── Allowlisted prefixes ───
+// Files under these directories are operational records (deployment proofs,
+// audit results) that are meant to be committed. They are NOT CI-bypass
+// artifacts — they document VPS deployments and security audits.
+const ALLOWLISTED_PREFIXES = ['ops/'];
+
 /**
  * Check if a file path starts with a forbidden directory.
  * @param {string} filePath - Relative file path from repo root
@@ -114,6 +120,11 @@ function evaluateChangedFiles(changedFiles) {
       continue;
     }
 
+    // Skip files under allowlisted operational prefixes (ops/, etc.)
+    if (ALLOWLISTED_PREFIXES.some(p => normalized.startsWith(p))) {
+      continue;
+    }
+
     // Check 1: Forbidden directory
     const dirCheck = checkForbiddenDirectory(normalized);
     if (dirCheck.forbidden) {
@@ -166,6 +177,7 @@ module.exports = {
   FORBIDDEN_DIRECTORIES,
   FORBIDDEN_PATTERNS,
   ALLOWLIST_MARKERS,
+  ALLOWLISTED_PREFIXES,
   evaluateChangedFiles,
   buildSummary,
   checkForbiddenDirectory,

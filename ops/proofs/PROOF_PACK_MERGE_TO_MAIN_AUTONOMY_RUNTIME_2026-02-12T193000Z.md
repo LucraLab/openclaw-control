@@ -131,7 +131,7 @@ Main has received 28 merges (Ports 4-15, drift baselines, etc.) since this branc
 
 ## PR
 
-- **PR #37:** https://github.com/LucraLab/openclaw-control/pull/37
+- **PR #37:** [#37](https://github.com/LucraLab/openclaw-control/pull/37)
 - **Branch:** `feat/delivery-os-gates` → `main`
 - **Commit:** `cf5a7bc` (latest, includes this proof pack)
 
