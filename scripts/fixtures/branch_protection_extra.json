@@ -2,12 +2,15 @@
   "required_status_checks": {
     "strict": true,
     "contexts": [
+      "arbiter-hints",
       "arbitration",
       "budget-enforcement",
       "capability-matrix",
       "context-budget",
       "drift-telemetry",
+      "evidence-graph",
       "executive-strategy",
+      "fix-pack",
       "isolation-guard",
       "lint-markdown",
       "ops-hardening",
@@ -15,9 +18,7 @@
       "scan-secrets",
       "two-stage-pr-review",
       "unknown-check",
-      "verification-gate",
-      "arbiter-hints",
-      "evidence-graph"
+      "verification-gate"
     ]
   }
 }
