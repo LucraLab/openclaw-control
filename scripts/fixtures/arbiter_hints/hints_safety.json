@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "computed_at": "2025-01-15T12:00:00Z",
+  "source_engine_version": "1.0.0",
+  "hints": [
+    {
+      "objective_id": "obj-42",
+      "priority_score": 80,
+      "risk_score": 95,
+      "confidence": 0.9,
+      "recommendation_code": "FOCUS",
+      "rank_delta_hint": 6,
+      "why_codes": ["high_risk"]
+    },
+    {
+      "objective_id": "obj-43",
+      "priority_score": 70,
+      "risk_score": 50,
+      "confidence": 0.3,
+      "recommendation_code": "INVESTIGATE",
+      "rank_delta_hint": 4,
+      "why_codes": ["low_confidence"]
+    },
+    {
+      "objective_id": "obj-44",
+      "priority_score": 60,
+      "risk_score": 30,
+      "confidence": 0.8,
+      "recommendation_code": "STOP",
+      "rank_delta_hint": 2,
+      "why_codes": ["kill_switch"]
+    },
+    {
+      "objective_id": "obj-45",
+      "priority_score": 55,
+      "risk_score": 40,
+      "confidence": 0.7,
+      "recommendation_code": "HOLD",
+      "rank_delta_hint": 1,
+      "why_codes": ["quarantined"]
+    },
+    {
+      "objective_id": "obj-46",
+      "priority_score": 65,
+      "risk_score": 35,
+      "confidence": 0.75,
+      "recommendation_code": "FOCUS",
+      "rank_delta_hint": 3,
+      "why_codes": ["high_impact"]
+    }
+  ]
+}
