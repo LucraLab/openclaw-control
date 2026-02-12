@@ -1,0 +1,12 @@
+{
+  "obj-44": {
+    "quarantined": true,
+    "quarantined_at": "2026-02-10T06:00:00Z",
+    "reason": "repeated_failure",
+    "events": [
+      {"type": "failure", "at": "2026-02-10T04:00:00Z"},
+      {"type": "failure", "at": "2026-02-10T05:00:00Z"},
+      {"type": "failure", "at": "2026-02-10T06:00:00Z"}
+    ]
+  }
+}

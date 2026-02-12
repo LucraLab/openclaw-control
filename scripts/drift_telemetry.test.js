@@ -167,7 +167,7 @@ test('DT-T8: missing gate workflow file detected', () => {
     if (fs.existsSync(src)) fs.copyFileSync(src, path.join(tmpScriptsDir, s));
   }
   // Copy fixtures
-  const fixtureFiles = fs.readdirSync(FIXTURES_DIR);
+  const fixtureFiles = fs.readdirSync(FIXTURES_DIR).filter(f => fs.statSync(path.join(FIXTURES_DIR, f)).isFile());
   for (const f of fixtureFiles) {
     fs.copyFileSync(path.join(FIXTURES_DIR, f), path.join(tmpScriptsDir, 'fixtures', f));
   }
@@ -216,7 +216,7 @@ test('DT-T9: workflow with wrong job ID detected', () => {
     const src = path.join(REPO_ROOT, 'scripts', s);
     if (fs.existsSync(src)) fs.copyFileSync(src, path.join(tmpScriptsDir, s));
   }
-  for (const f of fs.readdirSync(FIXTURES_DIR)) {
+  for (const f of fs.readdirSync(FIXTURES_DIR).filter(f => fs.statSync(path.join(FIXTURES_DIR, f)).isFile())) {
     fs.copyFileSync(path.join(FIXTURES_DIR, f), path.join(tmpScriptsDir, 'fixtures', f));
   }
 
@@ -272,7 +272,7 @@ test('DT-T11: forbidden write in fixture script detected', () => {
       fs.writeFileSync(path.join(tmpScriptsDir, s), content);
     }
   }
-  for (const f of fs.readdirSync(FIXTURES_DIR)) {
+  for (const f of fs.readdirSync(FIXTURES_DIR).filter(f => fs.statSync(path.join(FIXTURES_DIR, f)).isFile())) {
     fs.copyFileSync(path.join(FIXTURES_DIR, f), path.join(tmpScriptsDir, 'fixtures', f));
   }
 
