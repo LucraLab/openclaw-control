@@ -1,0 +1,17 @@
+{"event":"BUDGET_BREACH","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T01:00:00Z","budget_type":"context","usage":105000,"limit":100000}
+{"event":"BUDGET_NEAR_BREACH","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T01:05:00Z","budget_type":"cost","usage":4.8,"limit":5.0}
+{"event":"BUDGET_BREACH","agent_id":"executor","obj_id":"obj-43","ts":"2026-02-10T02:00:00Z","budget_type":"cost","usage":6.2,"limit":5.0}
+{"event":"MODEL_ESCALATION_BLOCKED","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T01:10:00Z","from":"haiku","to":"opus","reason":"budget_exceeded"}
+{"event":"MODEL_ESCALATION_ATTEMPT","agent_id":"builder","obj_id":"obj-44","ts":"2026-02-10T03:00:00Z","from":"haiku","to":"sonnet"}
+{"event":"ARBITRATION_BLOCKED","agent_id":"executor","obj_id":"obj-43","ts":"2026-02-10T02:30:00Z","lock_id":"repo_branch:LucraLab/openclaw-control@main","holder_pid":"12345","holder_agent":"builder"}
+{"event":"ARBITRATION_BLOCKED","agent_id":"executor","obj_id":"obj-43","ts":"2026-02-10T02:31:00Z","lock_id":"repo_branch:LucraLab/openclaw-control@main","holder_pid":"12345","holder_agent":"builder"}
+{"event":"ARBITRATION_BLOCKED","agent_id":"auditor","obj_id":"obj-45","ts":"2026-02-10T04:00:00Z","lock_id":"repo_branch:LucraLab/other@dev","holder_pid":"9999","holder_agent":"executor"}
+{"event":"DELIVERY_FAILED","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T01:30:00Z","reason":"test_failure"}
+{"event":"DELIVERY_FAILED","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T02:00:00Z","reason":"test_failure"}
+{"event":"DELIVERY_FAILED","agent_id":"executor","obj_id":"obj-46","ts":"2026-02-10T05:00:00Z","reason":"merge_conflict"}
+{"event":"DELIVERY_RETRY","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T02:10:00Z","attempt":2}
+{"event":"DELIVERY_RETRY","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T02:30:00Z","attempt":3}
+{"event":"ARBITRATION_SELECTED","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T00:55:00Z","lock_id":"repo_branch:LucraLab/openclaw-control@obj-42/task-1"}
+{"event":"ARBITRATION_SELECTED","agent_id":"executor","obj_id":"obj-43","ts":"2026-02-10T01:55:00Z","lock_id":"repo_branch:LucraLab/openclaw-control@obj-43/task-1"}
+{"event":"LOCK_ACQUIRED","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T00:55:01Z"}
+{"event":"LOCK_RELEASED","agent_id":"builder","obj_id":"obj-42","ts":"2026-02-10T01:30:00Z"}
