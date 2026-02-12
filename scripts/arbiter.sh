@@ -12,20 +12,23 @@
 #   OC_AGENT_ID      — Required. Must be: builder|executor|auditor
 #
 # Behavior:
-#   1. Enumerate objectives in $OC_AGENT_ROOT/objectives/
-#   2. Filter: status != COMPLETE/FAILED, not manual_only, risk != high
-#   3. Sort by created_at ascending (deterministic, stable)
-#   4. For each candidate:
-#      a. Find next eligible task (status != DONE)
-#      b. Compute repo_branch lock ID
-#      c. Attempt resource_lock_acquire
-#      d. If acquired → emit ARBITRATION_SELECTED, output run token
-#      e. If blocked → emit ARBITRATION_BLOCKED, try next
-#   5. If no candidate selected → emit ARBITRATION_SKIPPED, exit 0
+#   1. Check kill switch (Port #11)
+#   2. Enumerate objectives in $OC_AGENT_ROOT/objectives/
+#   3. Filter: status != COMPLETE/FAILED, not manual_only, risk != high
+#   4. Sort by created_at ascending (deterministic, stable)
+#   5. For each candidate:
+#      a. Check quarantine (Port #11) — skip if quarantined
+#      b. Find next eligible task (status != DONE)
+#      c. Compute repo_branch lock ID
+#      d. Attempt resource_lock_acquire
+#      e. If acquired → emit ARBITRATION_SELECTED, output run token
+#      f. If blocked → emit ARBITRATION_BLOCKED, try next
+#   6. If no candidate selected → emit ARBITRATION_SKIPPED, exit 0
 #
 # Exit codes:
 #   0 = selected (run token written) or no candidates
 #   1 = error (validation, environment)
+#   7 = kill switch engaged (Port #11)
 #
 set -uo pipefail
 
@@ -37,11 +40,26 @@ _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${_SCRIPT_DIR}/lib/oc_paths.sh"
 source "${_SCRIPT_DIR}/lib/oc_events.sh"
 source "${_SCRIPT_DIR}/lib/oc_resource_lock.sh"
+source "${_SCRIPT_DIR}/lib/oc_control.sh"
 
 # --- Require agent identity ---
 oc_require_agent_id || exit 1
 OC_AGENT_ROOT="$(oc_agent_root)"
 OBJECTIVES_DIR="$OC_AGENT_ROOT/objectives"
+
+# --- Kill switch check (Port #11) ---
+if oc_kill_switch_engaged; then
+  emit_event "KILL_SWITCH_ENGAGED" "agent_id=${OC_AGENT_ID}" "hostname=$(hostname -s 2>/dev/null || echo unknown)"
+  echo "Kill switch engaged; remove STOP file to resume." >&2
+  exit "$OC_KILL_SWITCH_EXIT_CODE"
+fi
+
+# --- Quarantine validity check (Port #11 — fail closed) ---
+if ! oc_quarantine_is_valid; then
+  emit_event "QUARANTINE_CORRUPT" "action=fail_closed"
+  echo "REFUSED: quarantine.json is corrupt — fail closed. Fix or remove $_OC_QUARANTINE_FILE" >&2
+  exit 1
+fi
 
 # --- Parse arguments ---
 OUTPUT_PATH=""
@@ -151,6 +169,12 @@ while IFS= read -r obj_line; do
   REPO=$(echo "$obj_line" | python3 -c "import json,sys; print(json.load(sys.stdin).get('repo',''))" 2>/dev/null)
 
   if [ -z "$OBJ_ID" ] || [ -z "$REPO" ]; then
+    continue
+  fi
+
+  # --- Quarantine check (Port #11) ---
+  if oc_quarantine_is_blocked "$OBJ_ID"; then
+    emit_event "OBJECTIVE_SKIPPED_QUARANTINE" "obj_id=$OBJ_ID"
     continue
   fi
 
