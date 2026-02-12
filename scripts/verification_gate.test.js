@@ -223,6 +223,31 @@ test('VG-T10: pattern matching is case-insensitive', () => {
     `Expected 3 violations, got ${result.violations.length}`);
 });
 
+// ─── VG-T11: ops/ prefix is allowlisted (deployment proofs) ───
+test('VG-T11: ops/ files with PROOF_PACK names are allowed', () => {
+  const files = [
+    'ops/proofs/PROOF_PACK_PORT16.md',
+    'ops/proof-packs/PROOF_PACK.md',
+    'ops/public_safe_audit/SCAN_RESULTS.txt',
+    'ops/proofs/PROOF_PACK_KILLSWITCH_GUARD.md'
+  ];
+  const result = policy.evaluateChangedFiles(files);
+  assert(result.ok === true,
+    `Expected ok=true for ops/ prefix files, got violations: ${JSON.stringify(result.violations)}`);
+});
+
+// ─── VG-T12: PROOF_PACK outside ops/ and docs/ is still forbidden ───
+test('VG-T12: PROOF_PACK outside ops/ still rejected', () => {
+  const files = [
+    'skills/PROOF_PACK_DELIVERY.md',
+    'PROOF_PACK_ROOT.md'
+  ];
+  const result = policy.evaluateChangedFiles(files);
+  assert(result.ok === false, 'Expected ok=false for PROOF_PACK outside ops/');
+  assert(result.violations.length === 2,
+    `Expected 2 violations, got ${result.violations.length}`);
+});
+
 console.log('');
 console.log('============================================');
 console.log(`  Results: ${passed} passed, ${failed} failed`);

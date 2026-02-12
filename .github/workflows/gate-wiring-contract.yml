@@ -1,0 +1,44 @@
+name: Wiring Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/wiring_contract.test.js'
+      - 'scripts/autonomy_runtime.js'
+      - 'scripts/killswitch.js'
+      - 'scripts/quarantine_agent.js'
+      - 'scripts/spend_alert.js'
+      - 'scripts/canonical_artifact.js'
+      - 'docs/AUTONOMY_RUNTIME_WIRING.md'
+      - '.github/workflows/gate-wiring-contract.yml'
+
+jobs:
+  wiring-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Wiring Contract tests
+        run: node scripts/wiring_contract.test.js
+        env:
+          OPENCLAW_RUNTIME_DIR: ${{ runner.temp }}/oc-wiring-test
+
+      - name: Verify no network imports in test
+        run: |
+          if grep -qE 'require\(.*(http|https|net|dgram|dns|tls)\b' scripts/wiring_contract.test.js; then
+            echo "FAIL: Test file imports network modules"
+            exit 1
+          fi
+          echo "PASS: No network modules imported"
+
+      - name: Verify wiring docs exist
+        run: |
+          if [ ! -f docs/AUTONOMY_RUNTIME_WIRING.md ]; then
+            echo "FAIL: docs/AUTONOMY_RUNTIME_WIRING.md not found"
+            exit 1
+          fi
+          echo "PASS: Wiring docs exist"

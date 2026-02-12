@@ -27,3 +27,6 @@ dist/
 # Editor
 .vscode/
 .idea/
+
+# Autonomy Runtime v1 — local state (never commit)
+.openclaw_runtime/

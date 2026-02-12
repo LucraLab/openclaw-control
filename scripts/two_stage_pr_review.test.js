@@ -2,7 +2,7 @@
 /**
  * two_stage_pr_review.test.js — Tests for two-stage PR review gate
  *
- * 12 test cases covering Stage 1 (spec compliance) and Stage 2 (quality):
+ * 14 test cases covering Stage 1 (spec compliance) and Stage 2 (quality):
  *   PR-T1:  PASS: PR body has obj + task + risk + DoD + valid plan
  *   PR-T2:  FAIL: missing objective id
  *   PR-T3:  FAIL: missing task id
@@ -15,6 +15,8 @@
  *   PR-T10: WARN: large diff but no test files changed
  *   PR-T11: PASS: risk high WITH risk-accepted label
  *   PR-T12: Report JSON has correct schema
+ *   PR-T13: PASS: ops/ files exempt from public-safe scanning
+ *   PR-T14: FAIL: non-ops/ files still trigger public-safe violations
  *
  * Pattern origin: obra/superpowers subagent-driven-development
  *   + solatis/claude-config QR agent (MUST/SHOULD/COULD severity)
@@ -295,6 +297,31 @@ test('PR-T12: Report JSON has correct schema', () => {
     pr_number: 100
   });
   assertEqual(failReport.combined_status, 'FAIL', 'combined should be FAIL if stage1 fails');
+});
+
+test('PR-T13: PASS: ops/ files exempt from public-safe scanning', () => {
+  const result = scanQualityIssues({
+    changedFiles: ['ops/proofs/PROOF_PACK_DEPLOYMENT.md'],
+    fileStats: { 'ops/proofs/PROOF_PACK_DEPLOYMENT.md': { size: 5000, binary: false } },
+    fileContents: { 'ops/proofs/PROOF_PACK_DEPLOYMENT.md': 'ssh root@srv853172.hstgr.cloud\nIP: 31.97.106.33\n' },
+    prBody: ''
+  });
+
+  const mustFindings = result.findings.filter(f => f.severity === 'MUST');
+  assertEqual(mustFindings.length, 0, 'ops/ files should not trigger public-safe violations');
+});
+
+test('PR-T14: FAIL: non-ops/ files still trigger public-safe violations', () => {
+  const result = scanQualityIssues({
+    changedFiles: ['scripts/config.js'],
+    fileStats: { 'scripts/config.js': { size: 200, binary: false } },
+    fileContents: { 'scripts/config.js': 'const host = "31.97.106.33";\n' },
+    prBody: ''
+  });
+
+  const mustFindings = result.findings.filter(f => f.severity === 'MUST');
+  assert(mustFindings.length >= 1, 'Non-ops/ files should still trigger public-safe');
+  assert(mustFindings.some(f => f.rule === 'public_safe_violation'), 'Should be public_safe_violation');
 });
 
 // ─── Summary ───
