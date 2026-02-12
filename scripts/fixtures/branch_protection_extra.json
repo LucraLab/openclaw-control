@@ -16,7 +16,8 @@
       "two-stage-pr-review",
       "unknown-check",
       "verification-gate",
-      "arbiter-hints"
+      "arbiter-hints",
+      "evidence-graph"
     ]
   }
 }

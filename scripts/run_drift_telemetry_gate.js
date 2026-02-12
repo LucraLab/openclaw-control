@@ -57,6 +57,7 @@ const EXPECTED_CONTEXTS = [
   'ops-hardening',
   'executive-strategy',
   'arbiter-hints',
+  'evidence-graph',
   'scan-public-safe',
   'scan-secrets',
   'two-stage-pr-review',
@@ -77,6 +78,7 @@ const REQUIRED_GATE_WORKFLOWS = {
   'gate-ops-hardening.yml': 'ops-hardening',
   'gate-executive-strategy.yml': 'executive-strategy',
   'gate-arbiter-hints.yml': 'arbiter-hints',
+  'gate-evidence-graph.yml': 'evidence-graph',
   'gate-verification-fresh.yml': 'verification-gate'
 };
 
