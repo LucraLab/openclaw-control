@@ -17,6 +17,7 @@
 #   0 = success
 #   1 = validation/constraint failure (fail-closed)
 #   2 = dry-run completed (no changes made)
+#   7 = kill switch engaged (Port #11)
 #
 set -uo pipefail
 
@@ -42,6 +43,7 @@ source "${_SCRIPT_DIR}/lib/oc_paths.sh"
 source "${_SCRIPT_DIR}/lib/oc_events.sh"
 source "${_SCRIPT_DIR}/lib/oc_lock.sh"
 source "${_SCRIPT_DIR}/lib/oc_resource_lock.sh"
+source "${_SCRIPT_DIR}/lib/oc_control.sh"
 
 # --- Require agent identity (Layer 4 isolation) ---
 oc_require_agent_id || exit 1
@@ -72,6 +74,13 @@ while [ $# -gt 0 ]; do
     *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
   esac
 done
+
+# --- Kill switch check (Port #11 — before any writes/locks) ---
+if oc_kill_switch_engaged; then
+  emit_event "KILL_SWITCH_ENGAGED" "agent_id=${OC_AGENT_ID}" "hostname=$(hostname -s 2>/dev/null || echo unknown)"
+  echo "Kill switch engaged; remove STOP file to resume." >&2
+  exit "$OC_KILL_SWITCH_EXIT_CODE"
+fi
 
 # --- Close-check mode ---
 if [ "$CLOSE_CHECK" = "true" ]; then
