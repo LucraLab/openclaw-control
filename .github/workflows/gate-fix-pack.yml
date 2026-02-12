@@ -1,0 +1,33 @@
+name: Fix Pack
+on:
+  pull_request:
+
+jobs:
+  fix-pack:
+    name: fix-pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run fix pack tests
+        run: node scripts/fix_pack.test.js
+
+      - name: Run fix pack gate
+        run: node scripts/run_fix_pack_gate.js --ci
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fix-pack-report
+          path: |
+            tmp/fix-pack-gate-report.json
+            artifacts/fix-pack.json
+            artifacts/fix-pack.md
+          retention-days: 30
