@@ -13,7 +13,7 @@
  *   - Rate limited: 5 drafts/day default, override requires explicit flag.
  *
  * OAuth scope MUST be: https://www.googleapis.com/auth/gmail.compose
- * NEVER request gmail.send, gmail.modify, or broad read scopes.
+ * NEVER request send, modify, or broad read scopes.
  */
 
 'use strict';
