@@ -106,8 +106,9 @@ const PER_AGENT_TIMEOUT = 20;
 
 // ─── Helper: build request shape ───
 function buildRequestShape(agent, prompt, maxTok) {
+  const gw = swarm.AGENT_GATEWAY_MAP[agent] || { host: 'localhost', port: 8082 };
   return {
-    url: `http://100.75.216.57:${BUILDER2_AGENTS.has(agent) ? 8082 : 8080}/v1/chat/completions`,
+    url: `http://${gw.host}:${gw.port}/v1/chat/completions`,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer [REDACTED]',
