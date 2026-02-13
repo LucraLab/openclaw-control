@@ -26,6 +26,9 @@ const PER_AGENT_TIMEOUT_MS = 20_000;
 const TOTAL_SWARM_TIMEOUT_MS = 45_000;
 const MAX_CONCURRENCY = 3;
 
+// Builder host — resolved from env or config at startup (Tailscale)
+const BUILDER_HOST = process.env.BUILDER_HOST || process.env.BUILDER2_HOST || 'localhost';
+
 // Full agent roster across both Builders
 const AGENT_ROSTER = [
   'pa', 'developer', 'architect', 'debugger', 'ops-1', 'ops-2',
@@ -36,23 +39,23 @@ const AGENT_ROSTER = [
 // Agent → Builder gateway mapping
 const AGENT_GATEWAY_MAP = {
   // Builder1 agents (port 8080, localhost-bound → needs tunnel or rebind)
-  'vault':             { host: '100.75.216.57', port: 8080 },
-  'finance':           { host: '100.75.216.57', port: 8080 },
-  'scrooge':           { host: '100.75.216.57', port: 8080 },
-  'ops-1':             { host: '100.75.216.57', port: 8080 },
-  'architect':         { host: '100.75.216.57', port: 8080 },
-  'developer':         { host: '100.75.216.57', port: 8080 },
-  'debugger':          { host: '100.75.216.57', port: 8080 },
-  'quality-reviewer':  { host: '100.75.216.57', port: 8080 },
-  'technical-writer':  { host: '100.75.216.57', port: 8080 },
+  'vault':             { host: BUILDER_HOST, port: 8080 },
+  'finance':           { host: BUILDER_HOST, port: 8080 },
+  'scrooge':           { host: BUILDER_HOST, port: 8080 },
+  'ops-1':             { host: BUILDER_HOST, port: 8080 },
+  'architect':         { host: BUILDER_HOST, port: 8080 },
+  'developer':         { host: BUILDER_HOST, port: 8080 },
+  'debugger':          { host: BUILDER_HOST, port: 8080 },
+  'quality-reviewer':  { host: BUILDER_HOST, port: 8080 },
+  'technical-writer':  { host: BUILDER_HOST, port: 8080 },
   // Builder2 agents (port 8082, Tailscale-bound)
-  'pa':                { host: '100.75.216.57', port: 8082 },
-  'sales':             { host: '100.75.216.57', port: 8082 },
-  'cs':                { host: '100.75.216.57', port: 8082 },
-  'rental':            { host: '100.75.216.57', port: 8082 },
-  'insights':          { host: '100.75.216.57', port: 8082 },
-  'crystal-pa':        { host: '100.75.216.57', port: 8082 },
-  'ops-2':             { host: '100.75.216.57', port: 8082 },
+  'pa':                { host: BUILDER_HOST, port: 8082 },
+  'sales':             { host: BUILDER_HOST, port: 8082 },
+  'cs':                { host: BUILDER_HOST, port: 8082 },
+  'rental':            { host: BUILDER_HOST, port: 8082 },
+  'insights':          { host: BUILDER_HOST, port: 8082 },
+  'crystal-pa':        { host: BUILDER_HOST, port: 8082 },
+  'ops-2':             { host: BUILDER_HOST, port: 8082 },
 };
 
 // Duplicate agents on both Builders — prefer Builder2 (Tailscale-reachable)

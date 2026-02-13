@@ -16,15 +16,15 @@
 #   bash scripts/multiagent_stress_runner.sh [--dry-run]
 #
 # Prerequisites:
-#   - Run from Dashboard VPS (100.83.32.96)
+#   - Run from Dashboard VPS (set BUILDER_HOST to Tailscale IP)
 #   - BUILDER2_AUTH_TOKEN set (or reads from gateway config)
-#   - Builder2 reachable at 100.75.216.57:8082
+#   - Builder2 reachable at BUILDER2_HOST:8082 via Tailscale
 #   - curl and jq available
 
 set -uo pipefail
 
 # ─── Configuration ───
-BUILDER2_HOST="${BUILDER2_HOST:-100.75.216.57}"
+BUILDER2_HOST="${BUILDER2_HOST:-${BUILDER_HOST:-localhost}}"
 BUILDER2_PORT="${BUILDER2_PORT:-8082}"
 MAX_TOKENS=64
 TEMPERATURE=0
@@ -46,7 +46,7 @@ for arg in "$@"; do
       echo ""
       echo "Environment:"
       echo "  BUILDER2_AUTH_TOKEN  Bearer token for Builder2 gateway"
-      echo "  BUILDER2_HOST       Builder2 Tailscale IP (default: 100.75.216.57)"
+      echo "  BUILDER2_HOST       Builder2 Tailscale IP (from BUILDER_HOST env)"
       echo "  BUILDER2_PORT       Builder2 gateway port (default: 8082)"
       echo "  OPENCLAW_RUNTIME_DIR  Runtime state directory"
       exit 0
