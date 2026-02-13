@@ -1,0 +1,75 @@
+name: Email Draft Gate
+on:
+  pull_request:
+
+jobs:
+  email-draft-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Email Draft tests
+        run: node scripts/email_draft.test.js
+        env:
+          OPENCLAW_RUNTIME_DIR: ${{ runner.temp }}/oc-email-draft-test
+          OPENCLAW_EMAIL_ALLOW_DOMAINS: lucralab.com,example.com
+          OPENCLAW_EMAIL_ALLOW_EXACT: james@personal.com
+
+      - name: Verify no gmail.send scope
+        run: |
+          if grep -rn 'gmail\.send' scripts/email_draft_policy.js scripts/gmail_draft.js scripts/email_draft.test.js; then
+            echo "FAIL: gmail.send scope string detected"
+            exit 1
+          fi
+          echo "PASS: No gmail.send scope found"
+
+      - name: Verify no users.messages.send usage
+        run: |
+          if grep -rn 'users/me/messages/send\|users\.messages\.send\|messages\.send' scripts/email_draft_policy.js scripts/gmail_draft.js; then
+            echo "FAIL: send endpoint detected"
+            exit 1
+          fi
+          echo "PASS: No send endpoint usage found"
+
+      - name: Verify no network calls in tests
+        run: |
+          if grep -qE 'require\(.*(net|dgram|dns|tls)\b' scripts/email_draft.test.js; then
+            echo "FAIL: Test file imports network modules"
+            exit 1
+          fi
+          # https is imported in policy but NOT used in tests (tests are offline)
+          if grep -qE 'require\(.*(https|http)\b' scripts/email_draft.test.js; then
+            echo "FAIL: Test file imports http/https modules"
+            exit 1
+          fi
+          echo "PASS: No network modules in test file"
+
+      - name: Verify runtime secrets paths are gitignored
+        run: |
+          if grep -q '.openclaw_runtime' .gitignore; then
+            echo "PASS: .openclaw_runtime is gitignored"
+          else
+            echo "FAIL: .openclaw_runtime not in .gitignore"
+            exit 1
+          fi
+          if grep -q 'secrets/' .gitignore; then
+            echo "PASS: secrets/ is gitignored"
+          else
+            echo "FAIL: secrets/ not in .gitignore"
+            exit 1
+          fi
+
+      - name: Verify no hardcoded secrets in source
+        run: |
+          # Check for common secret patterns in the email draft files
+          for f in scripts/email_draft_policy.js scripts/gmail_draft.js; do
+            if grep -qE '(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16}|pit-[a-zA-Z0-9]{20,})' "$f"; then
+              echo "FAIL: Hardcoded secret found in $f"
+              exit 1
+            fi
+          done
+          echo "PASS: No hardcoded secrets in source files"
