@@ -1,6 +1,6 @@
 # Merge Readiness Proof Pack — PR #42
 
-**PR:** https://github.com/LucraLab/openclaw-control/pull/42
+**PR:** <https://github.com/LucraLab/openclaw-control/pull/42>
 **Branch:** `feat/multiagent-wiring-stress-v2`
 **Head SHA:** `2f71c097ff11e1b9d139e5e91f19eb129b64dfb8`
 **Base:** `main`
@@ -108,16 +108,16 @@ Before merge, James must:
 
 ### Pre-merge
 
-1. Open PR #42: https://github.com/LucraLab/openclaw-control/pull/42
+1. Open PR #42: <https://github.com/LucraLab/openclaw-control/pull/42>
 2. Review the "Files changed" tab — confirm all files are additions only
 3. Approve the `QA Approval Required` workflow run
 4. Wait for all checks to show green
 
 ### Merge
 
-5. Click "Merge pull request" (use "Create a merge commit" or "Squash and merge" — your choice)
-6. Confirm the merge
-7. Delete the branch when prompted
+1. Click "Merge pull request" (use "Create a merge commit" or "Squash and merge" — your choice)
+2. Confirm the merge
+3. Delete the branch when prompted
 
 ### Post-merge Branch Protection Update
 
