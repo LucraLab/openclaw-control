@@ -310,9 +310,9 @@ for agent in "${ACTIVE_AGENTS[@]}"; do
     continue
   fi
 
-  AUTH_TOKEN="${BUILDER2_AUTH_TOKEN}"
+  AUTH_TOKEN=${BUILDER2_AUTH_TOKEN}
   if [ -n "${BUILDER1_AUTH_TOKEN:-}" ] && [ "$TARGET_PORT" = "$BUILDER1_PORT" ]; then
-    AUTH_TOKEN="$BUILDER1_AUTH_TOKEN"
+    AUTH_TOKEN=${BUILDER1_AUTH_TOKEN}
   fi
 
   BODY=$(cat <<ENDJSON
