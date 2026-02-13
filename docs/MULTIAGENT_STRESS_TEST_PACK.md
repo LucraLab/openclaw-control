@@ -52,8 +52,8 @@ Expected: 56 passed, 0 failed
 # Dry run (no HTTP calls)
 bash scripts/multiagent_stress_runner.sh --dry-run
 
-# Live run (requires BUILDER2_AUTH_TOKEN)
-BUILDER2_AUTH_TOKEN=<token> bash scripts/multiagent_stress_runner.sh
+# Live run (requires BUILDER2_AUTH_TOKEN env var)
+BUILDER2_AUTH_TOKEN=${YOUR_TOKEN} bash scripts/multiagent_stress_runner.sh
 ```
 
 ### Live Runner Preflight Checks
@@ -120,9 +120,9 @@ The CI gate includes a "no secrets in source" check that scans for common creden
 
 | Status | Example | Why |
 |--------|---------|-----|
-| BAD | `sk-test1234567890abcdef` (20 chars) | Matches CI gate regex (`sk-` + 20 alphanumeric) |
-| BAD | `ghp_abc123456789012345678901` (25 chars) | Matches CI gate regex (`ghp_` + 20+) |
-| BAD | `AKIAIOSFODNN7EXAMPLE` (16 uppercase) | Matches CI gate regex (`AKIA` + 16 uppercase) |
+| BAD | `sk-` + `test1234567890abcdef` (20 chars) | Matches CI gate regex (`sk-` + 20 alphanumeric) |
+| BAD | `ghp_` + `abc123456789012345678901` (25 chars) | Matches CI gate regex (`ghp_` + 20+) |
+| BAD | `AKIA` + `IOSFODNN7EXAMPLE` (16 uppercase) | Matches CI gate regex (`AKIA` + 16 uppercase) |
 | GOOD | `sk-abc1234567890xyz` (15 chars) | Above sanitizer threshold, below CI gate |
 | GOOD | `ghp_abcdef12345678` (14 chars) | Above sanitizer threshold, below CI gate |
 | GOOD | `AKIAabcDEF12345678` (mixed case) | CI gate only matches uppercase, mixed case is safe |
