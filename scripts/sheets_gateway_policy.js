@@ -907,6 +907,133 @@ function _resetWriteLedger() {
   } catch (_) {}
 }
 
+// ─── Telegram Command Handler ───
+
+/**
+ * Handle a /sheet Telegram command. Pure function — returns text to send.
+ *
+ * Sub-commands:
+ *   /sheet mode              — show current mode
+ *   /sheet mode AUTO|SAFE|LOCKDOWN — change mode (operator only)
+ *   /sheet pending           — list pending approvals
+ *   /sheet approve <id>      — approve a pending write
+ *   /sheet deny <id>         — deny a pending write
+ *   /sheet status            — summary (mode + pending count + rate)
+ *   /sheet rate              — rate limit stats
+ *
+ * @param {string} commandText — full command text (e.g. "/sheet mode AUTO")
+ * @param {string} callerRole — 'operator' or other role
+ * @returns {{ text: string, event?: object }}
+ */
+function handleSheetsCommand(commandText, callerRole) {
+  const parts = (commandText || '').trim().split(/\s+/);
+  // parts[0] = "/sheet", parts[1] = sub-command, parts[2+] = args
+  const sub = (parts[1] || '').toLowerCase();
+
+  if (!sub || sub === 'help') {
+    return {
+      text: [
+        'Sheets Gateway Commands:',
+        '  /sheet mode           — Show current write mode',
+        '  /sheet mode <MODE>    — Set mode (AUTO|SAFE|LOCKDOWN)',
+        '  /sheet pending        — List pending approvals',
+        '  /sheet approve <id>   — Approve a pending write',
+        '  /sheet deny <id>      — Deny a pending write',
+        '  /sheet status         — Summary dashboard',
+        '  /sheet rate           — Rate limit stats',
+      ].join('\n'),
+    };
+  }
+
+  if (sub === 'mode') {
+    const newMode = (parts[2] || '').toUpperCase();
+    if (!newMode) {
+      const wm = readWriteMode();
+      return { text: `Current write mode: ${wm.mode}\nChanged by: ${wm.changed_by}\nChanged at: ${wm.changed_at}` };
+    }
+    // Changing mode requires operator role
+    if (callerRole !== 'operator') {
+      return { text: `Permission denied: only operators can change write mode (you are: ${callerRole})` };
+    }
+    try {
+      const { state, event } = setWriteMode(newMode, callerRole);
+      return { text: `Write mode changed to ${state.mode} by ${state.changed_by}`, event };
+    } catch (err) {
+      return { text: `Error: ${err.message}` };
+    }
+  }
+
+  if (sub === 'pending') {
+    const pending = listPendingApprovals();
+    if (pending.length === 0) {
+      return { text: 'No pending approvals' };
+    }
+    const lines = ['Pending approvals:'];
+    for (const p of pending) {
+      lines.push(`  [${p.request_id}] ${p.sheet_id} ${p.range} — ${p.exception_type} (${p.agent_id})`);
+    }
+    return { text: lines.join('\n') };
+  }
+
+  if (sub === 'approve') {
+    const requestId = parts[2];
+    if (!requestId) return { text: 'Usage: /sheet approve <request_id>' };
+    if (callerRole !== 'operator') {
+      return { text: `Permission denied: only operators can approve writes (you are: ${callerRole})` };
+    }
+    const config = loadConfig();
+    const result = resolvePendingApproval(requestId, 'approved', callerRole, { config });
+    if (!result.ok) return { text: `Failed: ${result.reason}` };
+    return { text: `Approved: ${requestId}\nToken generated and stored server-side.` };
+  }
+
+  if (sub === 'deny') {
+    const requestId = parts[2];
+    if (!requestId) return { text: 'Usage: /sheet deny <request_id>' };
+    if (callerRole !== 'operator') {
+      return { text: `Permission denied: only operators can deny writes (you are: ${callerRole})` };
+    }
+    const result = resolvePendingApproval(requestId, 'denied', callerRole);
+    if (!result.ok) return { text: `Failed: ${result.reason}` };
+    return { text: `Denied: ${requestId}`, event: result.event };
+  }
+
+  if (sub === 'status') {
+    const wm = readWriteMode();
+    const pending = listPendingApprovals();
+    const entries = readWriteLedger();
+    const now = Date.now();
+    const recentMinute = entries.filter(e => (now - new Date(e.ts).getTime()) < 60000).length;
+    const recentHour = entries.filter(e => (now - new Date(e.ts).getTime()) < 3600000).length;
+    return {
+      text: [
+        `Write Mode: ${wm.mode}`,
+        `Pending Approvals: ${pending.length}`,
+        `Writes (last minute): ${recentMinute}/${wm.rate_limit_per_minute}`,
+        `Writes (last hour): ${recentHour}/${wm.rate_limit_per_hour}`,
+        `Changed by: ${wm.changed_by} at ${wm.changed_at}`,
+      ].join('\n'),
+    };
+  }
+
+  if (sub === 'rate') {
+    const wm = readWriteMode();
+    const entries = readWriteLedger();
+    const now = Date.now();
+    const recentMinute = entries.filter(e => (now - new Date(e.ts).getTime()) < 60000).length;
+    const recentHour = entries.filter(e => (now - new Date(e.ts).getTime()) < 3600000).length;
+    return {
+      text: [
+        'Rate Limit Stats:',
+        `  Per minute: ${recentMinute}/${wm.rate_limit_per_minute}`,
+        `  Per hour:   ${recentHour}/${wm.rate_limit_per_hour}`,
+      ].join('\n'),
+    };
+  }
+
+  return { text: `Unknown sub-command: ${sub}. Try /sheet help` };
+}
+
 /** For testing: reset write mode state by deleting the file. */
 function _resetWriteModeState() {
   try {
@@ -957,6 +1084,8 @@ module.exports = {
   readWriteLedger,
   checkWriteRateLimit,
   _resetWriteLedger,
+  // Telegram Command Handler
+  handleSheetsCommand,
   // Runtime (needed for tests)
   RUNTIME_DIR,
   runtimePath,

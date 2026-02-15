@@ -2,7 +2,7 @@
 /**
  * sheets_gateway.test.js — Fixture-only tests for sheets_gateway_policy.js
  *
- * 48 tests covering:
+ * 56 tests covering:
  *   SG-T1:  empty sheet allowlist denies all reads (fail-closed)
  *   SG-T2:  sheet not in allowlist blocked
  *   SG-T3:  range not in range allowlist blocked
@@ -51,6 +51,14 @@
  *   WM-T29: audit entry with write_mode and auto_approved fields
  *   WM-T30: event with custom event_type SHEETS_WRITE_RATE_LIMITED
  *   WM-T31: mode change event has correct fields
+ *   WM-T32: /sheet mode shows current mode
+ *   WM-T33: /sheet mode SAFE changes mode
+ *   WM-T34: /sheet mode SAFE by non-operator blocked
+ *   WM-T35: /sheet pending with 0 pending
+ *   WM-T36: /sheet pending with 2 pending shows list
+ *   WM-T37: /sheet approve <id> resolves and returns
+ *   WM-T38: /sheet deny <id> resolves and returns
+ *   WM-T39: /sheet status returns formatted summary
  *
  * Zero network. Temp files under tmp/. No external dependencies.
  */
@@ -90,6 +98,7 @@ const {
   _resetWriteLedger,
   RUNTIME_DIR,
   runtimePath,
+  handleSheetsCommand,
 } = require('./sheets_gateway_policy.js');
 
 // ─── Minimal test harness (matches repo convention) ───
@@ -683,6 +692,82 @@ test('WM-T31: mode change event has correct fields', () => {
   assert(event.new_mode === 'SAFE', 'new_mode should be SAFE');
   assert(event.changed_by === 'admin', 'changed_by should be admin');
   assert(typeof event.timestamp_utc === 'string', 'Should have timestamp');
+  _resetWriteModeState();
+});
+
+// --- Telegram Command tests ---
+
+test('WM-T32: /sheet mode shows current mode', () => {
+  _resetWriteModeState();
+  const result = handleSheetsCommand('/sheet mode', 'operator');
+  assert(result.text.includes('AUTO'), `Should show AUTO mode, got: ${result.text}`);
+});
+
+test('WM-T33: /sheet mode SAFE changes mode', () => {
+  _resetWriteModeState();
+  const result = handleSheetsCommand('/sheet mode SAFE', 'operator');
+  assert(result.text.includes('SAFE'), `Should confirm SAFE, got: ${result.text}`);
+  assert(result.event, 'Should return event');
+  assert(result.event.event_type === 'SHEETS_WRITE_MODE_CHANGED', 'Event type should be mode changed');
+  const readBack = readWriteMode();
+  assert(readBack.mode === 'SAFE', 'Mode should persist as SAFE');
+  _resetWriteModeState();
+});
+
+test('WM-T34: /sheet mode SAFE by non-operator blocked', () => {
+  _resetWriteModeState();
+  const result = handleSheetsCommand('/sheet mode SAFE', 'viewer');
+  assert(result.text.includes('Permission denied'), `Should deny non-operator, got: ${result.text}`);
+  _resetWriteModeState();
+});
+
+test('WM-T35: /sheet pending with 0 pending', () => {
+  _resetPendingApprovals();
+  const result = handleSheetsCommand('/sheet pending', 'operator');
+  assert(result.text.includes('No pending'), `Should say no pending, got: ${result.text}`);
+});
+
+test('WM-T36: /sheet pending with 2 pending shows list', () => {
+  _resetPendingApprovals();
+  addPendingApproval({ request_id: 'req-1', sheet_id: 's1', range: 'A1', agent_id: 'a1', proposed_at: new Date().toISOString() }, 'lockdown');
+  addPendingApproval({ request_id: 'req-2', sheet_id: 's2', range: 'B2', agent_id: 'a2', proposed_at: new Date().toISOString() }, 'large_write');
+  const result = handleSheetsCommand('/sheet pending', 'operator');
+  assert(result.text.includes('req-1'), 'Should show req-1');
+  assert(result.text.includes('req-2'), 'Should show req-2');
+  assert(result.text.includes('lockdown'), 'Should show exception type');
+  _resetPendingApprovals();
+});
+
+test('WM-T37: /sheet approve <id> resolves and returns', () => {
+  _resetTokenStore();
+  _resetPendingApprovals();
+  addPendingApproval({ request_id: 'req-approve-cmd', sheet_id: 's', range: 'r', agent_id: 'a', proposed_at: new Date().toISOString() }, 'lockdown');
+  const result = handleSheetsCommand('/sheet approve req-approve-cmd', 'operator');
+  assert(result.text.includes('Approved'), `Should confirm approval, got: ${result.text}`);
+  // Token should be stored
+  const stored = getStoredToken('req-approve-cmd');
+  assert(stored !== null, 'Token should be stored after approval');
+  _resetPendingApprovals();
+});
+
+test('WM-T38: /sheet deny <id> resolves and returns', () => {
+  _resetPendingApprovals();
+  addPendingApproval({ request_id: 'req-deny-cmd', sheet_id: 's', range: 'r', agent_id: 'a', proposed_at: new Date().toISOString() }, 'lockdown');
+  const result = handleSheetsCommand('/sheet deny req-deny-cmd', 'operator');
+  assert(result.text.includes('Denied'), `Should confirm denial, got: ${result.text}`);
+  assert(result.event, 'Should return event');
+  assert(result.event.event_type === 'SHEETS_WRITE_DENIED', 'Event type should be SHEETS_WRITE_DENIED');
+  _resetPendingApprovals();
+});
+
+test('WM-T39: /sheet status returns formatted summary', () => {
+  _resetWriteModeState();
+  _resetWriteLedger();
+  _resetPendingApprovals();
+  const result = handleSheetsCommand('/sheet status', 'operator');
+  assert(result.text.includes('Write Mode: AUTO'), `Should show mode, got: ${result.text}`);
+  assert(result.text.includes('Pending Approvals: 0'), `Should show 0 pending, got: ${result.text}`);
+  assert(result.text.includes('Writes (last minute)'), 'Should show rate stats');
   _resetWriteModeState();
 });
 
