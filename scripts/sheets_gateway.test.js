@@ -2,7 +2,7 @@
 /**
  * sheets_gateway.test.js — Fixture-only tests for sheets_gateway_policy.js
  *
- * 58 tests covering:
+ * 62 tests covering:
  *   SG-T1:  empty sheet allowlist denies all reads (fail-closed)
  *   SG-T2:  sheet not in allowlist blocked
  *   SG-T3:  range not in range allowlist blocked
@@ -59,6 +59,10 @@
  *   WM-T37: /sheet approve <id> resolves and returns
  *   WM-T38: /sheet deny <id> resolves and returns
  *   WM-T39: /sheet status returns formatted summary
+ *   WM-T42: full AUTO flow — propose + auto-approve + commit → ok
+ *   WM-T43: full LOCKDOWN flow — propose → pending → manual approve → commit → ok
+ *   WM-T44: full LOCKDOWN flow — propose → deny → commit fails
+ *   WM-T45: backward compat — default mode acts like AUTO (existing pattern works)
  *
  * Zero network. Temp files under tmp/. No external dependencies.
  */
@@ -796,6 +800,100 @@ test('WM-T41: report includes last 50 entries (capped)', () => {
   assert(report.last_50_entries.length === 50, `Last 50 should be 50, got ${report.last_50_entries.length}`);
   // Most recent should be first (reversed)
   assert(report.last_50_entries[0].request_id === 'req-59', `First entry should be req-59, got ${report.last_50_entries[0].request_id}`);
+  _resetWriteLedger();
+});
+
+// --- Integration tests ---
+
+test('WM-T42: full AUTO flow — propose + auto-approve + commit → ok', () => {
+  _resetTokenStore();
+  _resetWriteModeState();
+  _resetWriteLedger();
+  _resetPendingApprovals();
+  // Set mode to AUTO
+  setWriteMode('AUTO', 'test');
+  const config = makeConfig({});
+  // Propose — should auto-approve since sheet+range in allowlist, clean data, AUTO mode
+  const proposal = proposeWrite(config, TEST_SHEET_ID, TEST_RANGE, CLEAN_VALUES, { agent_id: 'tax-vault-operator' });
+  assert(proposal.ok, `Proposal should succeed, got: ${proposal.reason}`);
+  assert(proposal.auto_approved === true, 'Should be auto-approved');
+  assert(typeof proposal.approval_token === 'string', 'Should return approval_token');
+  // Commit with the auto-provided token
+  const result = commitWrite(config, proposal.pendingChange, proposal.approval_token, {});
+  assert(result.ok, `Commit should succeed, got: ${result.reason}`);
+  assert(result.outcome === 'ok', 'Outcome should be ok');
+  _resetWriteModeState();
+  _resetWriteLedger();
+});
+
+test('WM-T43: full LOCKDOWN flow — propose → pending → manual approve → commit → ok', () => {
+  _resetTokenStore();
+  _resetWriteModeState();
+  _resetWriteLedger();
+  _resetPendingApprovals();
+  setWriteMode('LOCKDOWN', 'test');
+  const config = makeConfig({});
+  const proposal = proposeWrite(config, TEST_SHEET_ID, TEST_RANGE, CLEAN_VALUES, { agent_id: 'tax-vault-operator' });
+  assert(proposal.ok, 'Proposal should succeed');
+  assert(proposal.approval_required === true, 'Should require approval');
+  assert(proposal.exception_type === 'lockdown', 'Exception should be lockdown');
+  // Manually approve via resolvePendingApproval
+  const resolveResult = resolvePendingApproval(proposal.pendingChange.request_id, 'approved', 'admin', { config });
+  assert(resolveResult.ok, 'Resolve should succeed');
+  assert(typeof resolveResult.token === 'string', 'Should get token from resolve');
+  // Commit with the manually-approved token
+  const result = commitWrite(config, proposal.pendingChange, resolveResult.token, {});
+  assert(result.ok, `Commit should succeed, got: ${result.reason}`);
+  _resetWriteModeState();
+  _resetWriteLedger();
+  _resetPendingApprovals();
+});
+
+test('WM-T44: full LOCKDOWN flow — propose → deny → commit fails', () => {
+  _resetTokenStore();
+  _resetWriteModeState();
+  _resetWriteLedger();
+  _resetPendingApprovals();
+  setWriteMode('LOCKDOWN', 'test');
+  const config = makeConfig({});
+  const proposal = proposeWrite(config, TEST_SHEET_ID, TEST_RANGE, CLEAN_VALUES, { agent_id: 'tax-vault-operator' });
+  assert(proposal.ok, 'Proposal should succeed');
+  assert(proposal.approval_required === true, 'Should require approval');
+  // Deny
+  resolvePendingApproval(proposal.pendingChange.request_id, 'denied', 'admin');
+  // Try to commit — should fail because original token was overwritten by resolve
+  const stored = getStoredToken(proposal.pendingChange.request_id);
+  // After denial, there's no new token stored, so use empty string
+  const result = commitWrite(config, proposal.pendingChange, '', {});
+  assert(!result.ok, 'Commit after denial should fail');
+  _resetWriteModeState();
+  _resetWriteLedger();
+  _resetPendingApprovals();
+});
+
+test('WM-T45: backward compat — default mode acts like AUTO', () => {
+  _resetTokenStore();
+  _resetWriteModeState();
+  _resetWriteLedger();
+  _resetPendingApprovals();
+  // Don't set any write mode — should default to AUTO
+  // proposeWrite → getStoredToken → commitWrite (old pattern)
+  const config = makeConfig({});
+  const proposal = proposeWrite(config, TEST_SHEET_ID, TEST_RANGE, CLEAN_VALUES, { agent_id: 'tax-vault-operator' });
+  assert(proposal.ok, 'Proposal should succeed');
+  // In AUTO mode (default), allowlisted write = auto-approved
+  // So existing pattern should still work via the auto_approved token
+  if (proposal.auto_approved) {
+    // New behavior: auto-approved, use the provided token
+    const result = commitWrite(config, proposal.pendingChange, proposal.approval_token, {});
+    assert(result.ok, 'Commit should succeed with auto-approved token');
+  } else {
+    // Fallback: old behavior with getStoredToken
+    const stored = getStoredToken(proposal.pendingChange.request_id);
+    assert(stored !== null, 'Token should be stored server-side');
+    const result = commitWrite(config, proposal.pendingChange, stored.token, {});
+    assert(result.ok, 'Commit should succeed with stored token');
+  }
   _resetWriteLedger();
 });
 

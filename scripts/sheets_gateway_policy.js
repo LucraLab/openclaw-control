@@ -380,6 +380,13 @@ function proposeWrite(config, sheetId, range, values, meta) {
     return { ok: false, pendingChange: null, payload_sha256: '', reason: rangeCheck.reason };
   }
 
+  // Rate limit check (NEW)
+  const writeMode = readWriteMode();
+  const rateCheck = checkWriteRateLimit(agent_id, writeMode);
+  if (!rateCheck.allowed) {
+    return { ok: false, pendingChange: null, payload_sha256: '', reason: rateCheck.reason };
+  }
+
   // PII scan (fail-closed)
   const piiResult = scanForPII(values);
   if (!piiResult.safe) {
@@ -392,10 +399,6 @@ function proposeWrite(config, sheetId, range, values, meta) {
     .update(JSON.stringify(values))
     .digest('hex');
 
-  // Create approval token — stored server-side, never in pendingChange
-  const approval = createApprovalToken(config.approvalTtlSeconds);
-  storeToken(request_id, approval);
-
   const pendingChange = {
     sheet_id: sheetId,
     range: range,
@@ -406,7 +409,36 @@ function proposeWrite(config, sheetId, range, values, meta) {
     proposed_at: new Date().toISOString(),
   };
 
-  return { ok: true, pendingChange, payload_sha256, reason: 'Write proposed — awaiting approval' };
+  // Smart approval routing (NEW)
+  const approvalDecision = shouldRequireApproval(config, writeMode, pendingChange, meta);
+
+  // Create approval token — stored server-side, never in pendingChange
+  const approval = createApprovalToken(config.approvalTtlSeconds);
+  storeToken(request_id, approval);
+
+  if (!approvalDecision.required) {
+    // Auto-approved: return the token so caller can immediately commitWrite
+    return {
+      ok: true,
+      pendingChange,
+      payload_sha256,
+      approval_token: approval.token,
+      auto_approved: true,
+      reason: approvalDecision.reason,
+    };
+  }
+
+  // Approval required: add to pending queue
+  addPendingApproval(pendingChange, approvalDecision.exception_type);
+
+  return {
+    ok: true,
+    pendingChange,
+    payload_sha256,
+    approval_required: true,
+    exception_type: approvalDecision.exception_type,
+    reason: 'Write proposed — awaiting approval (' + approvalDecision.exception_type + ')',
+  };
 }
 
 /**
@@ -426,10 +458,11 @@ function proposeWrite(config, sheetId, range, values, meta) {
 function commitWrite(config, pendingChange, approvalToken, opts) {
   const now = (opts && opts.now) || new Date();
   const eventSink = (opts && opts.eventSink) || null;
+  const writeMode = readWriteMode();
 
   if (!pendingChange || typeof pendingChange !== 'object') {
     const entry = buildAuditEntry({
-      outcome: 'failclosed', reason: 'Missing pending change object',
+      outcome: 'failclosed', reason: 'Missing pending change object', write_mode: writeMode.mode,
     });
     appendAuditLog(config.auditLogPath, entry);
     return { ok: false, outcome: 'failclosed', reason: 'Missing pending change object', auditEntry: entry, event: null };
@@ -441,8 +474,8 @@ function commitWrite(config, pendingChange, approvalToken, opts) {
   // Gate 1: Re-check allowlists
   const sheetCheck = checkSheetAllowlist(config, sheet_id);
   if (!sheetCheck.allowed) {
-    const entry = buildAuditEntry({ ...eventBase, outcome: 'blocked', reason: sheetCheck.reason });
-    const event = buildSheetsEvent({ ...eventBase, outcome: 'blocked', reason: sheetCheck.reason });
+    const entry = buildAuditEntry({ ...eventBase, outcome: 'blocked', reason: sheetCheck.reason, write_mode: writeMode.mode });
+    const event = buildSheetsEvent({ ...eventBase, outcome: 'blocked', reason: sheetCheck.reason, write_mode: writeMode.mode });
     appendAuditLog(config.auditLogPath, entry);
     if (eventSink) eventSink(event);
     return { ok: false, outcome: 'blocked', reason: sheetCheck.reason, auditEntry: entry, event };
@@ -450,8 +483,8 @@ function commitWrite(config, pendingChange, approvalToken, opts) {
 
   const rangeCheck = checkRangeAllowlist(config, range);
   if (!rangeCheck.allowed) {
-    const entry = buildAuditEntry({ ...eventBase, outcome: 'blocked', reason: rangeCheck.reason });
-    const event = buildSheetsEvent({ ...eventBase, outcome: 'blocked', reason: rangeCheck.reason });
+    const entry = buildAuditEntry({ ...eventBase, outcome: 'blocked', reason: rangeCheck.reason, write_mode: writeMode.mode });
+    const event = buildSheetsEvent({ ...eventBase, outcome: 'blocked', reason: rangeCheck.reason, write_mode: writeMode.mode });
     appendAuditLog(config.auditLogPath, entry);
     if (eventSink) eventSink(event);
     return { ok: false, outcome: 'blocked', reason: rangeCheck.reason, auditEntry: entry, event };
@@ -461,8 +494,8 @@ function commitWrite(config, pendingChange, approvalToken, opts) {
   const piiResult = scanForPII(values);
   if (!piiResult.safe) {
     const reason = `PII_BLOCKED: ${piiResult.reason}`;
-    const entry = buildAuditEntry({ ...eventBase, outcome: 'failclosed', reason });
-    const event = buildSheetsEvent({ ...eventBase, outcome: 'failclosed', reason });
+    const entry = buildAuditEntry({ ...eventBase, outcome: 'failclosed', reason, write_mode: writeMode.mode });
+    const event = buildSheetsEvent({ ...eventBase, outcome: 'failclosed', reason, write_mode: writeMode.mode });
     appendAuditLog(config.auditLogPath, entry);
     if (eventSink) eventSink(event);
     return { ok: false, outcome: 'failclosed', reason, auditEntry: entry, event };
@@ -471,8 +504,8 @@ function commitWrite(config, pendingChange, approvalToken, opts) {
   // Gate 3: Approval token
   const approvalCheck = validateApproval(config, pendingChange, approvalToken, now);
   if (!approvalCheck.valid) {
-    const entry = buildAuditEntry({ ...eventBase, outcome: 'blocked', reason: approvalCheck.reason });
-    const event = buildSheetsEvent({ ...eventBase, outcome: 'blocked', reason: approvalCheck.reason });
+    const entry = buildAuditEntry({ ...eventBase, outcome: 'blocked', reason: approvalCheck.reason, write_mode: writeMode.mode });
+    const event = buildSheetsEvent({ ...eventBase, outcome: 'blocked', reason: approvalCheck.reason, write_mode: writeMode.mode });
     appendAuditLog(config.auditLogPath, entry);
     if (eventSink) eventSink(event);
     return { ok: false, outcome: 'blocked', reason: approvalCheck.reason, auditEntry: entry, event };
@@ -482,16 +515,16 @@ function commitWrite(config, pendingChange, approvalToken, opts) {
   const currentHash = crypto.createHash('sha256').update(JSON.stringify(values)).digest('hex');
   if (currentHash !== pendingChange.payload_sha256) {
     const reason = 'Payload integrity check failed — values modified after proposal';
-    const entry = buildAuditEntry({ ...eventBase, outcome: 'failclosed', reason, payload_sha256: currentHash });
-    const event = buildSheetsEvent({ ...eventBase, outcome: 'failclosed', reason });
+    const entry = buildAuditEntry({ ...eventBase, outcome: 'failclosed', reason, payload_sha256: currentHash, write_mode: writeMode.mode });
+    const event = buildSheetsEvent({ ...eventBase, outcome: 'failclosed', reason, write_mode: writeMode.mode });
     appendAuditLog(config.auditLogPath, entry);
     if (eventSink) eventSink(event);
     return { ok: false, outcome: 'failclosed', reason, auditEntry: entry, event };
   }
 
   // All gates passed
-  const entry = buildAuditEntry({ ...eventBase, outcome: 'ok', reason: 'All gates passed', payload_sha256: currentHash });
-  const event = buildSheetsEvent({ ...eventBase, outcome: 'ok', reason: 'All gates passed' });
+  const entry = buildAuditEntry({ ...eventBase, outcome: 'ok', reason: 'All gates passed', payload_sha256: currentHash, write_mode: writeMode.mode });
+  const event = buildSheetsEvent({ ...eventBase, outcome: 'ok', reason: 'All gates passed', write_mode: writeMode.mode });
   appendAuditLog(config.auditLogPath, entry);
   if (eventSink) eventSink(event);
 
