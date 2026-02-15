@@ -2,7 +2,7 @@
 /**
  * sheets_gateway.test.js — Fixture-only tests for sheets_gateway_policy.js
  *
- * 40 tests covering:
+ * 45 tests covering:
  *   SG-T1:  empty sheet allowlist denies all reads (fail-closed)
  *   SG-T2:  sheet not in allowlist blocked
  *   SG-T3:  range not in range allowlist blocked
@@ -43,6 +43,11 @@
  *   WM-T21b: resolvePendingApproval(denied) emits SHEETS_WRITE_DENIED
  *   WM-T22: expired pending approvals filtered out by list
  *   WM-T23: resolve non-existent request_id returns error
+ *   WM-T24: under rate limit → allowed
+ *   WM-T25: at minute limit → blocked
+ *   WM-T26: at hour limit → blocked
+ *   WM-T27: different agent_id not affected
+ *   WM-T28: appendWriteLedger creates JSONL entry
  *
  * Zero network. Temp files under tmp/. No external dependencies.
  */
@@ -74,6 +79,10 @@ const {
   listPendingApprovals,
   resolvePendingApproval,
   _resetPendingApprovals,
+  appendWriteLedger,
+  readWriteLedger,
+  checkWriteRateLimit,
+  _resetWriteLedger,
   RUNTIME_DIR,
   runtimePath,
 } = require('./sheets_gateway_policy.js');
@@ -567,6 +576,63 @@ test('WM-T23: resolve non-existent request_id returns error', () => {
   const result = resolvePendingApproval('req-nonexistent', 'approved', 'admin');
   assert(!result.ok, 'Should fail for non-existent request');
   assert(result.reason.includes('No pending approval'), `Reason should mention not found, got: ${result.reason}`);
+});
+
+// --- Rate Limiting tests ---
+
+test('WM-T24: under rate limit → allowed', () => {
+  _resetWriteLedger();
+  appendWriteLedger({ agent_id: 'test-agent', sheet_id: 's', range: 'r', outcome: 'ok', request_id: 'req-1' });
+  const result = checkWriteRateLimit('test-agent', { rate_limit_per_minute: 30, rate_limit_per_hour: 500 });
+  assert(result.allowed, 'Should be allowed under limit');
+  assert(result.count_minute === 1, `count_minute should be 1, got ${result.count_minute}`);
+  _resetWriteLedger();
+});
+
+test('WM-T25: at minute limit → blocked', () => {
+  _resetWriteLedger();
+  // Write 5 entries for the same agent
+  for (let i = 0; i < 5; i++) {
+    appendWriteLedger({ agent_id: 'test-agent', sheet_id: 's', range: 'r', outcome: 'ok', request_id: `req-${i}` });
+  }
+  const result = checkWriteRateLimit('test-agent', { rate_limit_per_minute: 5, rate_limit_per_hour: 500 });
+  assert(!result.allowed, 'Should be blocked at minute limit');
+  assert(result.reason.includes('per minute'), 'Reason should mention per minute');
+  assert(result.count_minute === 5, `count_minute should be 5, got ${result.count_minute}`);
+  _resetWriteLedger();
+});
+
+test('WM-T26: at hour limit → blocked', () => {
+  _resetWriteLedger();
+  for (let i = 0; i < 3; i++) {
+    appendWriteLedger({ agent_id: 'test-agent', sheet_id: 's', range: 'r', outcome: 'ok', request_id: `req-${i}` });
+  }
+  const result = checkWriteRateLimit('test-agent', { rate_limit_per_minute: 100, rate_limit_per_hour: 3 });
+  assert(!result.allowed, 'Should be blocked at hour limit');
+  assert(result.reason.includes('per hour'), 'Reason should mention per hour');
+  _resetWriteLedger();
+});
+
+test('WM-T27: different agent_id not affected', () => {
+  _resetWriteLedger();
+  for (let i = 0; i < 5; i++) {
+    appendWriteLedger({ agent_id: 'agent-A', sheet_id: 's', range: 'r', outcome: 'ok', request_id: `req-${i}` });
+  }
+  const result = checkWriteRateLimit('agent-B', { rate_limit_per_minute: 5, rate_limit_per_hour: 500 });
+  assert(result.allowed, 'agent-B should not be affected by agent-A limits');
+  assert(result.count_minute === 0, 'agent-B count should be 0');
+  _resetWriteLedger();
+});
+
+test('WM-T28: appendWriteLedger creates JSONL entry', () => {
+  _resetWriteLedger();
+  appendWriteLedger({ agent_id: 'test', sheet_id: 'sheet1', range: 'A1', outcome: 'ok', request_id: 'req-x' });
+  const entries = readWriteLedger();
+  assert(entries.length === 1, `Expected 1 entry, got ${entries.length}`);
+  assert(entries[0].agent_id === 'test', 'agent_id should be test');
+  assert(entries[0].sheet_id === 'sheet1', 'sheet_id should be sheet1');
+  assert(typeof entries[0].ts === 'string', 'Should have timestamp');
+  _resetWriteLedger();
 });
 
 // ─── Results ───

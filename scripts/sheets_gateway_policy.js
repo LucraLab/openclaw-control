@@ -802,6 +802,105 @@ function _resetPendingApprovals() {
   } catch (_) {}
 }
 
+// ─── Rate Limiting ───
+
+const SHEETS_RATE_LEDGER_FILE = 'sheets-write-ledger.jsonl';
+
+/**
+ * Append an entry to the write rate ledger.
+ *
+ * @param {object} entry — { agent_id, sheet_id, range, outcome, request_id }
+ */
+function appendWriteLedger(entry) {
+  ensureRuntimeDir();
+  const record = {
+    ts: new Date().toISOString(),
+    agent_id: entry.agent_id || 'unknown',
+    sheet_id: entry.sheet_id || 'unknown',
+    range: entry.range || 'unknown',
+    outcome: entry.outcome || 'unknown',
+    request_id: entry.request_id || 'unknown',
+  };
+  const filePath = runtimePath(SHEETS_RATE_LEDGER_FILE);
+  fs.appendFileSync(filePath, JSON.stringify(record) + '\n');
+}
+
+/**
+ * Read all entries from the write rate ledger.
+ *
+ * @returns {Array<object>}
+ */
+function readWriteLedger() {
+  const filePath = runtimePath(SHEETS_RATE_LEDGER_FILE);
+  if (!fs.existsSync(filePath)) return [];
+  const lines = fs.readFileSync(filePath, 'utf8').trim().split('\n').filter(Boolean);
+  const entries = [];
+  for (const line of lines) {
+    try { entries.push(JSON.parse(line)); } catch (_) {}
+  }
+  return entries;
+}
+
+/**
+ * Check if an agent has exceeded rate limits.
+ *
+ * @param {string} agentId — agent identifier
+ * @param {object} [writeMode] — from readWriteMode(), provides rate_limit_per_minute and rate_limit_per_hour
+ * @returns {{ allowed: boolean, reason: string, count_minute: number, count_hour: number, limit_minute: number, limit_hour: number }}
+ */
+function checkWriteRateLimit(agentId, writeMode) {
+  const limitMinute = (writeMode && typeof writeMode.rate_limit_per_minute === 'number') ? writeMode.rate_limit_per_minute : 30;
+  const limitHour = (writeMode && typeof writeMode.rate_limit_per_hour === 'number') ? writeMode.rate_limit_per_hour : 500;
+
+  const now = Date.now();
+  const oneMinuteAgo = now - 60 * 1000;
+  const oneHourAgo = now - 3600 * 1000;
+
+  const entries = readWriteLedger();
+  let countMinute = 0;
+  let countHour = 0;
+
+  for (const entry of entries) {
+    if (entry.agent_id !== agentId) continue;
+    const ts = new Date(entry.ts).getTime();
+    if (ts >= oneMinuteAgo) countMinute++;
+    if (ts >= oneHourAgo) countHour++;
+  }
+
+  if (countMinute >= limitMinute) {
+    return {
+      allowed: false,
+      reason: `Rate limited: ${countMinute}/${limitMinute} writes per minute for agent "${agentId}"`,
+      count_minute: countMinute, count_hour: countHour,
+      limit_minute: limitMinute, limit_hour: limitHour,
+    };
+  }
+
+  if (countHour >= limitHour) {
+    return {
+      allowed: false,
+      reason: `Rate limited: ${countHour}/${limitHour} writes per hour for agent "${agentId}"`,
+      count_minute: countMinute, count_hour: countHour,
+      limit_minute: limitMinute, limit_hour: limitHour,
+    };
+  }
+
+  return {
+    allowed: true,
+    reason: 'Within rate limits',
+    count_minute: countMinute, count_hour: countHour,
+    limit_minute: limitMinute, limit_hour: limitHour,
+  };
+}
+
+/** For testing: reset rate ledger by deleting the file. */
+function _resetWriteLedger() {
+  try {
+    const filePath = runtimePath(SHEETS_RATE_LEDGER_FILE);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (_) {}
+}
+
 /** For testing: reset write mode state by deleting the file. */
 function _resetWriteModeState() {
   try {
@@ -847,6 +946,11 @@ module.exports = {
   listPendingApprovals,
   resolvePendingApproval,
   _resetPendingApprovals,
+  // Rate Limiting
+  appendWriteLedger,
+  readWriteLedger,
+  checkWriteRateLimit,
+  _resetWriteLedger,
   // Runtime (needed for tests)
   RUNTIME_DIR,
   runtimePath,
