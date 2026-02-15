@@ -677,6 +677,131 @@ function shouldRequireApproval(config, writeMode, pendingChange, meta) {
   return { required: false, reason: 'Allowlisted write in ' + mode + ' mode — auto-approved', exception_type: null };
 }
 
+// ─── Pending Approval Store ───
+
+const PENDING_APPROVALS_FILE = 'sheets-pending-approvals.jsonl';
+
+/**
+ * Add a pending approval entry to the JSONL file.
+ *
+ * @param {object} pendingChange — from proposeWrite()
+ * @param {string} exceptionType — from shouldRequireApproval()
+ * @returns {object} the stored entry
+ */
+function addPendingApproval(pendingChange, exceptionType) {
+  ensureRuntimeDir();
+  const entry = {
+    request_id: pendingChange.request_id,
+    sheet_id: pendingChange.sheet_id,
+    range: pendingChange.range,
+    agent_id: pendingChange.agent_id,
+    exception_type: exceptionType || 'unknown',
+    proposed_at: pendingChange.proposed_at || new Date().toISOString(),
+    status: 'pending',
+  };
+  const filePath = runtimePath(PENDING_APPROVALS_FILE);
+  fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
+  return entry;
+}
+
+/**
+ * List all pending approvals. Filters out resolved and expired entries.
+ *
+ * @param {object} [opts] — { ttlSeconds } TTL for pending approvals (default: 3600)
+ * @returns {Array<object>} pending entries sorted by proposed_at desc
+ */
+function listPendingApprovals(opts) {
+  const ttlSeconds = (opts && opts.ttlSeconds) || 3600;
+  const now = Date.now();
+  const filePath = runtimePath(PENDING_APPROVALS_FILE);
+  if (!fs.existsSync(filePath)) return [];
+  const lines = fs.readFileSync(filePath, 'utf8').trim().split('\n').filter(Boolean);
+  const entries = [];
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line);
+      if (entry.status !== 'pending') continue;
+      // TTL filter
+      const proposedAt = new Date(entry.proposed_at).getTime();
+      if (now - proposedAt > ttlSeconds * 1000) continue;
+      entries.push(entry);
+    } catch (_) {}
+  }
+  // Sort by proposed_at desc (newest first)
+  entries.sort((a, b) => new Date(b.proposed_at) - new Date(a.proposed_at));
+  return entries;
+}
+
+/**
+ * Resolve a pending approval (approve or deny).
+ *
+ * @param {string} requestId — the request_id to resolve
+ * @param {'approved'|'denied'} resolution
+ * @param {string} resolvedBy — identifier of who resolved it
+ * @param {object} [opts] — { config } for token creation
+ * @returns {{ ok: boolean, token?: string, reason: string, event?: object }}
+ */
+function resolvePendingApproval(requestId, resolution, resolvedBy, opts) {
+  const filePath = runtimePath(PENDING_APPROVALS_FILE);
+  if (!fs.existsSync(filePath)) {
+    return { ok: false, reason: `No pending approvals file found` };
+  }
+
+  const lines = fs.readFileSync(filePath, 'utf8').trim().split('\n').filter(Boolean);
+  let found = false;
+  const updatedLines = [];
+
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line);
+      if (entry.request_id === requestId && entry.status === 'pending') {
+        found = true;
+        entry.status = resolution;
+        entry.resolved_by = resolvedBy || 'unknown';
+        entry.resolved_at = new Date().toISOString();
+      }
+      updatedLines.push(JSON.stringify(entry));
+    } catch (_) {
+      updatedLines.push(line); // preserve unparseable lines
+    }
+  }
+
+  if (!found) {
+    return { ok: false, reason: `No pending approval found for request_id: ${requestId}` };
+  }
+
+  // Atomic write back
+  ensureRuntimeDir();
+  const tmpPath = filePath + '.tmp.' + process.pid;
+  fs.writeFileSync(tmpPath, updatedLines.join('\n') + '\n');
+  fs.renameSync(tmpPath, filePath);
+
+  if (resolution === 'approved') {
+    const config = (opts && opts.config) || loadConfig();
+    const approval = createApprovalToken(config.approvalTtlSeconds);
+    storeToken(requestId, approval);
+    return { ok: true, token: approval.token, reason: 'Approved by ' + (resolvedBy || 'unknown') };
+  }
+
+  // Denied
+  const event = {
+    event_type: 'SHEETS_WRITE_DENIED',
+    timestamp_utc: new Date().toISOString(),
+    request_id: requestId,
+    resolved_by: resolvedBy || 'unknown',
+    resolution: 'denied',
+  };
+  return { ok: true, reason: 'Denied by ' + (resolvedBy || 'unknown'), event };
+}
+
+/** For testing: reset pending approvals by deleting the file. */
+function _resetPendingApprovals() {
+  try {
+    const filePath = runtimePath(PENDING_APPROVALS_FILE);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (_) {}
+}
+
 /** For testing: reset write mode state by deleting the file. */
 function _resetWriteModeState() {
   try {
@@ -717,6 +842,11 @@ module.exports = {
   setWriteMode,
   shouldRequireApproval,
   _resetWriteModeState,
+  // PendingApprovalStore
+  addPendingApproval,
+  listPendingApprovals,
+  resolvePendingApproval,
+  _resetPendingApprovals,
   // Runtime (needed for tests)
   RUNTIME_DIR,
   runtimePath,

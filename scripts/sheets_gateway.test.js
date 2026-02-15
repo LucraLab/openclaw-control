@@ -2,7 +2,7 @@
 /**
  * sheets_gateway.test.js — Fixture-only tests for sheets_gateway_policy.js
  *
- * 34 tests covering:
+ * 40 tests covering:
  *   SG-T1:  empty sheet allowlist denies all reads (fail-closed)
  *   SG-T2:  sheet not in allowlist blocked
  *   SG-T3:  range not in range allowlist blocked
@@ -37,6 +37,12 @@
  *   WM-T11: SAFE mode + append → approval required (append_in_safe_mode)
  *   WM-T12: SAFE mode + >10 rows → approval required (large_write_safe)
  *   WM-T13: LOCKDOWN mode → always required
+ *   WM-T18: addPendingApproval creates JSONL entry
+ *   WM-T19: listPendingApprovals returns only pending entries
+ *   WM-T20: resolvePendingApproval(approved) stores token and returns it
+ *   WM-T21b: resolvePendingApproval(denied) emits SHEETS_WRITE_DENIED
+ *   WM-T22: expired pending approvals filtered out by list
+ *   WM-T23: resolve non-existent request_id returns error
  *
  * Zero network. Temp files under tmp/. No external dependencies.
  */
@@ -64,6 +70,10 @@ const {
   setWriteMode,
   shouldRequireApproval,
   _resetWriteModeState,
+  addPendingApproval,
+  listPendingApprovals,
+  resolvePendingApproval,
+  _resetPendingApprovals,
   RUNTIME_DIR,
   runtimePath,
 } = require('./sheets_gateway_policy.js');
@@ -481,6 +491,82 @@ test('WM-T13: LOCKDOWN mode → always required', () => {
   const result = shouldRequireApproval(config, writeMode, pendingChange, {});
   assert(result.required, 'LOCKDOWN should always require approval');
   assert(result.exception_type === 'lockdown', `Expected lockdown, got ${result.exception_type}`);
+});
+
+// --- PendingApprovalStore tests ---
+
+test('WM-T18: addPendingApproval creates JSONL entry', () => {
+  _resetPendingApprovals();
+  const pendingChange = {
+    request_id: 'req-001',
+    sheet_id: TEST_SHEET_ID,
+    range: TEST_RANGE,
+    agent_id: 'tax-vault-operator',
+    proposed_at: new Date().toISOString(),
+  };
+  const entry = addPendingApproval(pendingChange, 'out_of_range');
+  assert(entry.request_id === 'req-001', 'Entry should have request_id');
+  assert(entry.status === 'pending', 'Entry should be pending');
+  assert(entry.exception_type === 'out_of_range', 'Entry should have exception_type');
+  _resetPendingApprovals();
+});
+
+test('WM-T19: listPendingApprovals returns only pending entries', () => {
+  _resetPendingApprovals();
+  const now = new Date().toISOString();
+  addPendingApproval({ request_id: 'req-a', sheet_id: 's', range: 'r', agent_id: 'a', proposed_at: now }, 'lockdown');
+  addPendingApproval({ request_id: 'req-b', sheet_id: 's', range: 'r', agent_id: 'a', proposed_at: now }, 'lockdown');
+  // Resolve one
+  resolvePendingApproval('req-a', 'denied', 'operator');
+  const pending = listPendingApprovals();
+  assert(pending.length === 1, `Expected 1 pending, got ${pending.length}`);
+  assert(pending[0].request_id === 'req-b', 'Should only have req-b');
+  _resetPendingApprovals();
+});
+
+test('WM-T20: resolvePendingApproval(approved) stores token and returns it', () => {
+  _resetTokenStore();
+  _resetPendingApprovals();
+  const config = makeConfig({});
+  addPendingApproval({ request_id: 'req-approve', sheet_id: 's', range: 'r', agent_id: 'a', proposed_at: new Date().toISOString() }, 'lockdown');
+  const result = resolvePendingApproval('req-approve', 'approved', 'admin', { config });
+  assert(result.ok, 'Should resolve ok');
+  assert(typeof result.token === 'string' && result.token.length > 0, 'Should return a token');
+  // Token should be stored server-side
+  const stored = getStoredToken('req-approve');
+  assert(stored !== null, 'Token should be stored in token store');
+  assert(stored.token === result.token, 'Stored token should match returned token');
+  _resetPendingApprovals();
+});
+
+test('WM-T21b: resolvePendingApproval(denied) emits SHEETS_WRITE_DENIED', () => {
+  _resetPendingApprovals();
+  addPendingApproval({ request_id: 'req-deny', sheet_id: 's', range: 'r', agent_id: 'a', proposed_at: new Date().toISOString() }, 'lockdown');
+  const result = resolvePendingApproval('req-deny', 'denied', 'admin');
+  assert(result.ok, 'Should resolve ok');
+  assert(result.event, 'Should have event');
+  assert(result.event.event_type === 'SHEETS_WRITE_DENIED', 'Event type should be SHEETS_WRITE_DENIED');
+  assert(result.event.resolved_by === 'admin', 'Resolved by should be admin');
+  _resetPendingApprovals();
+});
+
+test('WM-T22: expired pending approvals filtered out by list', () => {
+  _resetPendingApprovals();
+  // Add entry with old timestamp
+  const oldDate = new Date(Date.now() - 7200 * 1000).toISOString(); // 2 hours ago
+  addPendingApproval({ request_id: 'req-old', sheet_id: 's', range: 'r', agent_id: 'a', proposed_at: oldDate }, 'lockdown');
+  addPendingApproval({ request_id: 'req-new', sheet_id: 's', range: 'r', agent_id: 'a', proposed_at: new Date().toISOString() }, 'lockdown');
+  const pending = listPendingApprovals({ ttlSeconds: 3600 }); // 1 hour TTL
+  assert(pending.length === 1, `Expected 1 pending (old expired), got ${pending.length}`);
+  assert(pending[0].request_id === 'req-new', 'Should only have req-new');
+  _resetPendingApprovals();
+});
+
+test('WM-T23: resolve non-existent request_id returns error', () => {
+  _resetPendingApprovals();
+  const result = resolvePendingApproval('req-nonexistent', 'approved', 'admin');
+  assert(!result.ok, 'Should fail for non-existent request');
+  assert(result.reason.includes('No pending approval'), `Reason should mention not found, got: ${result.reason}`);
 });
 
 // ─── Results ───
