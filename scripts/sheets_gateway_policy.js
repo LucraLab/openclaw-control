@@ -593,6 +593,90 @@ function setWriteMode(mode, changedBy) {
   return { state, event };
 }
 
+/**
+ * Determine if a proposed write requires human approval.
+ *
+ * Decision tree:
+ *   LOCKDOWN → always required
+ *   AUTO:
+ *     - Sheet+range in allowlist AND values pass PII → NOT required
+ *     - Out-of-range (range not in allowlist) → required (out_of_range)
+ *     - Large write (>100 cells or >50 rows) → required (large_write)
+ *     - Destructive operation → required (destructive)
+ *     - Uncertain PII → required (uncertain_pii)
+ *   SAFE:
+ *     - Same as AUTO, plus: any append → required (append_in_safe_mode)
+ *     - Any write >10 rows → required (large_write_safe)
+ *
+ * @param {object} config — loaded config from loadConfig()
+ * @param {object} writeMode — from readWriteMode()
+ * @param {object} pendingChange — from proposeWrite() result
+ * @param {object} [meta] — { operation, row_count, cell_count }
+ * @returns {{ required: boolean, reason: string, exception_type: string|null }}
+ */
+function shouldRequireApproval(config, writeMode, pendingChange, meta) {
+  const mode = (writeMode && writeMode.mode) || 'LOCKDOWN';
+  const operation = (meta && meta.operation) || 'update';
+  const rowCount = (meta && meta.row_count) || 0;
+  const cellCount = (meta && meta.cell_count) || 0;
+
+  // LOCKDOWN always requires approval
+  if (mode === 'LOCKDOWN') {
+    return { required: true, reason: 'LOCKDOWN mode — all writes require approval', exception_type: 'lockdown' };
+  }
+
+  // Check range allowlist for out-of-range detection
+  if (pendingChange && config.rangeAllowlist && config.rangeAllowlist.length > 0) {
+    if (!config.rangeAllowlist.includes(pendingChange.range)) {
+      return { required: true, reason: `Range "${pendingChange.range}" not in allowlist`, exception_type: 'out_of_range' };
+    }
+  }
+
+  // Destructive operations always require approval
+  const destructiveOps = ['clearValues', 'deleteRows', 'deleteColumns', 'deleteDimension', 'delete'];
+  if (destructiveOps.includes(operation)) {
+    return { required: true, reason: `Destructive operation: ${operation}`, exception_type: 'destructive' };
+  }
+
+  // Large write detection
+  if (mode === 'AUTO') {
+    if (cellCount > 100) {
+      return { required: true, reason: `Large write: ${cellCount} cells exceeds 100-cell threshold`, exception_type: 'large_write' };
+    }
+    if (rowCount > 50) {
+      return { required: true, reason: `Large write: ${rowCount} rows exceeds 50-row threshold`, exception_type: 'large_write' };
+    }
+  }
+
+  if (mode === 'SAFE') {
+    // SAFE mode: append operations need approval
+    if (operation === 'append') {
+      return { required: true, reason: 'SAFE mode — append operations require approval', exception_type: 'append_in_safe_mode' };
+    }
+    // SAFE mode: lower thresholds
+    if (cellCount > 100) {
+      return { required: true, reason: `Large write: ${cellCount} cells exceeds 100-cell threshold`, exception_type: 'large_write' };
+    }
+    if (rowCount > 10) {
+      return { required: true, reason: `SAFE mode — ${rowCount} rows exceeds 10-row threshold`, exception_type: 'large_write_safe' };
+    }
+  }
+
+  // PII uncertainty check: if values contain "ssn", "tax_id" etc as field names but actual values are clean, flag as uncertain
+  if (pendingChange && pendingChange.values) {
+    const serialized = JSON.stringify(pendingChange.values).toLowerCase();
+    const uncertainPatterns = ['ssn', 'social_security', 'tax_id', 'ein_number', 'itin_number'];
+    for (const pattern of uncertainPatterns) {
+      if (serialized.includes(pattern)) {
+        return { required: true, reason: `Uncertain PII: field name contains "${pattern}"`, exception_type: 'uncertain_pii' };
+      }
+    }
+  }
+
+  // All checks passed — approval not required
+  return { required: false, reason: 'Allowlisted write in ' + mode + ' mode — auto-approved', exception_type: null };
+}
+
 /** For testing: reset write mode state by deleting the file. */
 function _resetWriteModeState() {
   try {
@@ -631,6 +715,7 @@ module.exports = {
   DEFAULT_WRITE_MODE,
   readWriteMode,
   setWriteMode,
+  shouldRequireApproval,
   _resetWriteModeState,
   // Runtime (needed for tests)
   RUNTIME_DIR,

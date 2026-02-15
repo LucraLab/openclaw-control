@@ -2,7 +2,7 @@
 /**
  * sheets_gateway.test.js — Fixture-only tests for sheets_gateway_policy.js
  *
- * 26 tests covering:
+ * 34 tests covering:
  *   SG-T1:  empty sheet allowlist denies all reads (fail-closed)
  *   SG-T2:  sheet not in allowlist blocked
  *   SG-T3:  range not in range allowlist blocked
@@ -29,6 +29,14 @@
  *   WM-T3:  setWriteMode(INVALID) throws
  *   WM-T4:  setWriteMode(LOCKDOWN) emits SHEETS_WRITE_MODE_CHANGED event
  *   WM-T5:  corrupt JSON file falls back to AUTO
+ *   WM-T6:  AUTO mode + allowlisted sheet + clean data → approval NOT required
+ *   WM-T7:  AUTO mode + out-of-range → approval required (out_of_range)
+ *   WM-T8:  AUTO mode + >100 cells → approval required (large_write)
+ *   WM-T9:  AUTO mode + destructive operation → approval required (destructive)
+ *   WM-T10: AUTO mode + uncertain PII → approval required (uncertain_pii)
+ *   WM-T11: SAFE mode + append → approval required (append_in_safe_mode)
+ *   WM-T12: SAFE mode + >10 rows → approval required (large_write_safe)
+ *   WM-T13: LOCKDOWN mode → always required
  *
  * Zero network. Temp files under tmp/. No external dependencies.
  */
@@ -54,6 +62,7 @@ const {
   DEFAULT_WRITE_MODE,
   readWriteMode,
   setWriteMode,
+  shouldRequireApproval,
   _resetWriteModeState,
   RUNTIME_DIR,
   runtimePath,
@@ -397,6 +406,81 @@ test('WM-T5: corrupt JSON file falls back to AUTO', () => {
   const wm = readWriteMode();
   assert(wm.mode === 'AUTO', `Corrupt file should fall back to AUTO, got ${wm.mode}`);
   _resetWriteModeState();
+});
+
+// --- shouldRequireApproval tests ---
+
+test('WM-T6: AUTO mode + allowlisted sheet + clean data → approval NOT required', () => {
+  _resetWriteModeState();
+  const config = makeConfig({});
+  const writeMode = { mode: 'AUTO' };
+  const pendingChange = { range: TEST_RANGE, values: CLEAN_VALUES };
+  const result = shouldRequireApproval(config, writeMode, pendingChange, {});
+  assert(!result.required, `Should not require approval, got: ${result.reason}`);
+  assert(result.exception_type === null, 'exception_type should be null');
+});
+
+test('WM-T7: AUTO mode + out-of-range → approval required (out_of_range)', () => {
+  const config = makeConfig({});
+  const writeMode = { mode: 'AUTO' };
+  const pendingChange = { range: 'Sheet2!Z99:Z100', values: CLEAN_VALUES };
+  const result = shouldRequireApproval(config, writeMode, pendingChange, {});
+  assert(result.required, 'Should require approval for out-of-range');
+  assert(result.exception_type === 'out_of_range', `Expected out_of_range, got ${result.exception_type}`);
+});
+
+test('WM-T8: AUTO mode + >100 cells → approval required (large_write)', () => {
+  const config = makeConfig({});
+  const writeMode = { mode: 'AUTO' };
+  const pendingChange = { range: TEST_RANGE, values: CLEAN_VALUES };
+  const result = shouldRequireApproval(config, writeMode, pendingChange, { cell_count: 150 });
+  assert(result.required, 'Should require approval for large write');
+  assert(result.exception_type === 'large_write', `Expected large_write, got ${result.exception_type}`);
+});
+
+test('WM-T9: AUTO mode + destructive operation → approval required (destructive)', () => {
+  const config = makeConfig({});
+  const writeMode = { mode: 'AUTO' };
+  const pendingChange = { range: TEST_RANGE, values: [] };
+  const result = shouldRequireApproval(config, writeMode, pendingChange, { operation: 'deleteRows' });
+  assert(result.required, 'Should require approval for destructive op');
+  assert(result.exception_type === 'destructive', `Expected destructive, got ${result.exception_type}`);
+});
+
+test('WM-T10: AUTO mode + uncertain PII → approval required (uncertain_pii)', () => {
+  const config = makeConfig({});
+  const writeMode = { mode: 'AUTO' };
+  const pendingChange = { range: TEST_RANGE, values: [['ssn_field', '(redacted)']] };
+  const result = shouldRequireApproval(config, writeMode, pendingChange, {});
+  assert(result.required, 'Should require approval for uncertain PII');
+  assert(result.exception_type === 'uncertain_pii', `Expected uncertain_pii, got ${result.exception_type}`);
+});
+
+test('WM-T11: SAFE mode + append → approval required (append_in_safe_mode)', () => {
+  const config = makeConfig({});
+  const writeMode = { mode: 'SAFE' };
+  const pendingChange = { range: TEST_RANGE, values: CLEAN_VALUES };
+  const result = shouldRequireApproval(config, writeMode, pendingChange, { operation: 'append' });
+  assert(result.required, 'Should require approval for append in SAFE mode');
+  assert(result.exception_type === 'append_in_safe_mode', `Expected append_in_safe_mode, got ${result.exception_type}`);
+});
+
+test('WM-T12: SAFE mode + >10 rows → approval required (large_write_safe)', () => {
+  const config = makeConfig({});
+  const writeMode = { mode: 'SAFE' };
+  const pendingChange = { range: TEST_RANGE, values: CLEAN_VALUES };
+  const result = shouldRequireApproval(config, writeMode, pendingChange, { row_count: 15 });
+  assert(result.required, 'Should require approval for >10 rows in SAFE mode');
+  assert(result.exception_type === 'large_write_safe', `Expected large_write_safe, got ${result.exception_type}`);
+});
+
+test('WM-T13: LOCKDOWN mode → always required', () => {
+  const config = makeConfig({});
+  const writeMode = { mode: 'LOCKDOWN' };
+  const pendingChange = { range: TEST_RANGE, values: CLEAN_VALUES };
+  const result = shouldRequireApproval(config, writeMode, pendingChange, {});
+  assert(result.required, 'LOCKDOWN should always require approval');
+  assert(result.exception_type === 'lockdown', `Expected lockdown, got ${result.exception_type}`);
 });
 
 // ─── Results ───
