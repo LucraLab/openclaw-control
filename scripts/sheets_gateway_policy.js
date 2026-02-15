@@ -301,6 +301,10 @@ function buildAuditEntry(opts) {
     outcome: outcome || 'unknown',
     reason: reason || '',
     payload_sha256: payload_sha256 || '',
+    write_mode: opts.write_mode || 'unknown',
+    exception_type: opts.exception_type || null,
+    auto_approved: opts.auto_approved || false,
+    rate_limit_remaining: opts.rate_limit_remaining !== undefined ? opts.rate_limit_remaining : null,
   };
 }
 
@@ -316,7 +320,7 @@ function buildAuditEntry(opts) {
 function buildSheetsEvent(opts) {
   const { agent_id, request_id, sheet_id, range, outcome, reason } = opts;
   return {
-    event_type: 'SHEETS_WRITE_ATTEMPT',
+    event_type: opts.event_type || 'SHEETS_WRITE_ATTEMPT',
     timestamp_utc: new Date().toISOString(),
     agent_id: agent_id || 'unknown',
     request_id: request_id || 'unknown',
@@ -324,6 +328,8 @@ function buildSheetsEvent(opts) {
     range: range || 'unknown',
     outcome: outcome || 'unknown',
     reason: reason || '',
+    write_mode: opts.write_mode || 'unknown',
+    exception_type: opts.exception_type || null,
   };
 }
 

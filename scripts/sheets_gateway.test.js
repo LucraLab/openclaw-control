@@ -2,7 +2,7 @@
 /**
  * sheets_gateway.test.js — Fixture-only tests for sheets_gateway_policy.js
  *
- * 45 tests covering:
+ * 48 tests covering:
  *   SG-T1:  empty sheet allowlist denies all reads (fail-closed)
  *   SG-T2:  sheet not in allowlist blocked
  *   SG-T3:  range not in range allowlist blocked
@@ -48,6 +48,9 @@
  *   WM-T26: at hour limit → blocked
  *   WM-T27: different agent_id not affected
  *   WM-T28: appendWriteLedger creates JSONL entry
+ *   WM-T29: audit entry with write_mode and auto_approved fields
+ *   WM-T30: event with custom event_type SHEETS_WRITE_RATE_LIMITED
+ *   WM-T31: mode change event has correct fields
  *
  * Zero network. Temp files under tmp/. No external dependencies.
  */
@@ -69,6 +72,8 @@ const {
   readValues,
   proposeWrite,
   commitWrite,
+  buildAuditEntry,
+  buildSheetsEvent,
   WRITE_MODES,
   DEFAULT_WRITE_MODE,
   readWriteMode,
@@ -633,6 +638,52 @@ test('WM-T28: appendWriteLedger creates JSONL entry', () => {
   assert(entries[0].sheet_id === 'sheet1', 'sheet_id should be sheet1');
   assert(typeof entries[0].ts === 'string', 'Should have timestamp');
   _resetWriteLedger();
+});
+
+// --- Enhanced Audit + Events tests ---
+
+test('WM-T29: audit entry with write_mode and auto_approved fields', () => {
+  const entry = buildAuditEntry({
+    agent_id: 'tax-vault-operator',
+    request_id: 'req-auto',
+    sheet_id: 'sheet1',
+    range: 'A1:B2',
+    outcome: 'ok',
+    reason: 'Auto-approved',
+    write_mode: 'AUTO',
+    auto_approved: true,
+    rate_limit_remaining: 25,
+  });
+  assert(entry.write_mode === 'AUTO', 'write_mode should be AUTO');
+  assert(entry.auto_approved === true, 'auto_approved should be true');
+  assert(entry.rate_limit_remaining === 25, 'rate_limit_remaining should be 25');
+  assert(entry.exception_type === null, 'exception_type should be null for auto-approved');
+});
+
+test('WM-T30: event with custom event_type SHEETS_WRITE_RATE_LIMITED', () => {
+  const event = buildSheetsEvent({
+    event_type: 'SHEETS_WRITE_RATE_LIMITED',
+    agent_id: 'tax-vault-operator',
+    request_id: 'req-limited',
+    sheet_id: 'sheet1',
+    range: 'A1:B2',
+    outcome: 'blocked',
+    reason: 'Rate limited',
+    write_mode: 'AUTO',
+  });
+  assert(event.event_type === 'SHEETS_WRITE_RATE_LIMITED', 'event_type should be SHEETS_WRITE_RATE_LIMITED');
+  assert(event.write_mode === 'AUTO', 'write_mode should be AUTO');
+  assert(event.outcome === 'blocked', 'outcome should be blocked');
+});
+
+test('WM-T31: mode change event has correct fields', () => {
+  _resetWriteModeState();
+  const { event } = setWriteMode('SAFE', 'admin');
+  assert(event.event_type === 'SHEETS_WRITE_MODE_CHANGED', 'event_type should be SHEETS_WRITE_MODE_CHANGED');
+  assert(event.new_mode === 'SAFE', 'new_mode should be SAFE');
+  assert(event.changed_by === 'admin', 'changed_by should be admin');
+  assert(typeof event.timestamp_utc === 'string', 'Should have timestamp');
+  _resetWriteModeState();
 });
 
 // ─── Results ───
