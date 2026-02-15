@@ -2,7 +2,7 @@
 /**
  * sheets_gateway.test.js — Fixture-only tests for sheets_gateway_policy.js
  *
- * 56 tests covering:
+ * 58 tests covering:
  *   SG-T1:  empty sheet allowlist denies all reads (fail-closed)
  *   SG-T2:  sheet not in allowlist blocked
  *   SG-T3:  range not in range allowlist blocked
@@ -99,6 +99,7 @@ const {
   RUNTIME_DIR,
   runtimePath,
   handleSheetsCommand,
+  buildWriteModeReport,
 } = require('./sheets_gateway_policy.js');
 
 // ─── Minimal test harness (matches repo convention) ───
@@ -769,6 +770,33 @@ test('WM-T39: /sheet status returns formatted summary', () => {
   assert(result.text.includes('Pending Approvals: 0'), `Should show 0 pending, got: ${result.text}`);
   assert(result.text.includes('Writes (last minute)'), 'Should show rate stats');
   _resetWriteModeState();
+});
+
+// --- WriteModeReport tests ---
+
+test('WM-T40: report includes current mode + pending count', () => {
+  _resetWriteModeState();
+  _resetPendingApprovals();
+  _resetWriteLedger();
+  const report = buildWriteModeReport();
+  assert(report.mode === 'AUTO', `Mode should be AUTO, got ${report.mode}`);
+  assert(report.pending_count === 0, `Pending count should be 0, got ${report.pending_count}`);
+  assert(report.report_type === 'sheets_write_mode', 'Report type should be sheets_write_mode');
+  assert(typeof report.generated_at === 'string', 'Should have generated_at');
+});
+
+test('WM-T41: report includes last 50 entries (capped)', () => {
+  _resetWriteLedger();
+  // Write 60 entries
+  for (let i = 0; i < 60; i++) {
+    appendWriteLedger({ agent_id: 'test', sheet_id: 's', range: 'r', outcome: 'ok', request_id: `req-${i}` });
+  }
+  const report = buildWriteModeReport();
+  assert(report.total_ledger_entries === 60, `Total should be 60, got ${report.total_ledger_entries}`);
+  assert(report.last_50_entries.length === 50, `Last 50 should be 50, got ${report.last_50_entries.length}`);
+  // Most recent should be first (reversed)
+  assert(report.last_50_entries[0].request_id === 'req-59', `First entry should be req-59, got ${report.last_50_entries[0].request_id}`);
+  _resetWriteLedger();
 });
 
 // ─── Results ───

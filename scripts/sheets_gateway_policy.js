@@ -1034,6 +1034,43 @@ function handleSheetsCommand(commandText, callerRole) {
   return { text: `Unknown sub-command: ${sub}. Try /sheet help` };
 }
 
+// ─── WriteMode Report Builder ───
+
+/**
+ * Build a comprehensive WriteMode report artifact.
+ * Returns JSON suitable for writeCanonicalArtifact().
+ *
+ * @returns {object} report data
+ */
+function buildWriteModeReport() {
+  const wm = readWriteMode();
+  const pending = listPendingApprovals();
+  const ledger = readWriteLedger();
+  const now = Date.now();
+
+  const recentMinute = ledger.filter(e => (now - new Date(e.ts).getTime()) < 60000).length;
+  const recentHour = ledger.filter(e => (now - new Date(e.ts).getTime()) < 3600000).length;
+
+  // Last 50 audit entries (most recent first)
+  const last50 = ledger.slice(-50).reverse();
+
+  return {
+    report_type: 'sheets_write_mode',
+    generated_at: new Date().toISOString(),
+    mode: wm.mode,
+    changed_by: wm.changed_by,
+    changed_at: wm.changed_at,
+    rate_limit_per_minute: wm.rate_limit_per_minute,
+    rate_limit_per_hour: wm.rate_limit_per_hour,
+    pending_count: pending.length,
+    pending_approvals: pending,
+    writes_last_minute: recentMinute,
+    writes_last_hour: recentHour,
+    total_ledger_entries: ledger.length,
+    last_50_entries: last50,
+  };
+}
+
 /** For testing: reset write mode state by deleting the file. */
 function _resetWriteModeState() {
   try {
@@ -1086,6 +1123,8 @@ module.exports = {
   _resetWriteLedger,
   // Telegram Command Handler
   handleSheetsCommand,
+  // WriteMode Report
+  buildWriteModeReport,
   // Runtime (needed for tests)
   RUNTIME_DIR,
   runtimePath,
