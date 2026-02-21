@@ -1,38 +1,39 @@
 #!/bin/bash
 # routing_smoke_suite.sh — E2E routing validation for Builder agent targeting
-# Location: /home/openclaw/staging/current/ops/scripts/routing_smoke_suite.sh
+# Location: ops/scripts/routing_smoke_suite.sh
 #
-# Tests:
-#   1. Builder2 HTTP: model "openclaw/<agent>" targeting
-#   2. Builder2 HTTP: model "agent:<agent>" targeting
-#   3. Builder2 HTTP: X-OpenClaw-Agent-Id header targeting
-#   4. Builder1 HTTP: model "openclaw/<agent>" targeting
-#   5. Dude allowlist: invalid agent REFUSED (AGENT_ROUTE_REFUSED)
-#   6. Dude allowlist: valid agent ALLOWED
-#   7. Dude allowlist: non-agent command passes through
+# Semantics:
+#   ROUTE_OK  = HTTP reached gateway, agent resolution accepted (not 401/404)
+#   MODEL_OK  = LLM response contains normal completion (not provider error)
+#
+#   PASS          = ROUTE_OK + MODEL_OK
+#   PASS_ROUTE    = ROUTE_OK but MODEL_OK failed (provider/billing issue)
+#   FAIL          = ROUTE_OK failed
+#
+# Verdict:
+#   FAIL if any required ROUTE_OK check fails
+#   WARN (exit 0) if ROUTE_OK passes but MODEL_OK fails
 #
 # Output:
-#   - PASS/FAIL summary to stdout
+#   - PASS/FAIL/WARN summary to stdout
 #   - JSON log to /tmp/routing-smoke-<ts>.json
-#   - Proof markdown to /home/openclaw/staging/current/ops/proofs/
+#   - Proof markdown to ops/proofs/
 #
 # Usage: bash routing_smoke_suite.sh
-#
-# Tokens and secrets are NEVER logged. Redacted in all output.
 
 set -uo pipefail
 
 TS=$(date -u +%Y-%m-%dT%H%M%SZ)
 LOG_FILE="/tmp/routing-smoke-${TS}.json"
 PROOF_DIR="/home/openclaw/staging/current/ops/proofs"
-PROOF_FILE="${PROOF_DIR}/PROOF_ROUTING_SMOKE_SUITE_${TS}.md"
+PROOF_FILE="${PROOF_DIR}/PROOF_ROUTING_SMOKE_SUITE_ROUTE_VS_MODEL_${TS}.md"
 
-# Builder connectivity (read from peers.json + allowlist)
+# Builder connectivity
 BUILDER_TS_IP="100.75.216.57"
 B1_PORT=8080
 B2_PORT=8082
 
-# Auth tokens (redacted in output)
+# Auth tokens (redacted in all output)
 B1_TOKEN="2b7526a0647a3925a61cb113fe65a38e8bf749435f991276a85c6ab7182d9d6a"
 B2_TOKEN="d0ef2036e033134523d2ecb0585902b10acd393962154cac67fe2802d7fc2827"
 
@@ -42,221 +43,280 @@ B2_KNOWN_AGENT="sales"
 INVALID_AGENT="definitely-not-real-agent-xyz"
 
 TOTAL=0
-PASS=0
-FAIL=0
-RESULTS=()
+ROUTE_PASS=0
+MODEL_PASS=0
+ROUTE_FAIL=0
+WARN_COUNT=0
+RESULTS_JSON=""
 
 redact_token() {
   echo "$1" | sed -E 's/[a-f0-9]{64}/[REDACTED-64-HEX]/g; s/Bearer [^ ]+/Bearer [REDACTED]/g'
 }
 
-run_test() {
+# Core test runner with ROUTE_OK / MODEL_OK split
+run_http_test() {
+  local name="$1" target="$2" method="$3"
+  shift 3
+  local curl_cmd="$*"
+  TOTAL=$((TOTAL + 1))
+
+  local output http_code
+  output=$(eval "$curl_cmd -w '\\n%{http_code}'" 2>&1)
+  http_code=$(echo "$output" | tail -1)
+  local body
+  body=$(echo "$output" | sed '$d')
+
+  local route_ok=0 model_ok=0 error_class="none" status="FAIL"
+
+  # ROUTE_OK: gateway accepted the request (200, 500 with JSON body, etc.)
+  # NOT route_ok: connection refused, 401, 404
+  case "$http_code" in
+    200)
+      route_ok=1
+      # Check if response has normal completion
+      if echo "$body" | grep -q '"choices"' && ! echo "$body" | grep -qi 'billing\|rate.limit\|credits\|balance\|models failed'; then
+        model_ok=1
+      elif echo "$body" | grep -qiE 'billing|rate.limit|credits|balance|models failed'; then
+        error_class="provider_billing"
+      fi
+      ;;
+    500)
+      # 500 with JSON error body = gateway processed but LLM failed = route OK
+      if echo "$body" | grep -q '"error"'; then
+        route_ok=1
+        if echo "$body" | grep -qiE 'billing|rate.limit|credits|balance|models failed'; then
+          error_class="provider_billing"
+        else
+          error_class="gateway_500"
+        fi
+      fi
+      ;;
+    401) error_class="auth_failed" ;;
+    404) error_class="not_found" ;;
+    000) error_class="connection_refused" ;;
+    *)   error_class="http_${http_code}" ;;
+  esac
+
+  if [ "$route_ok" -eq 1 ] && [ "$model_ok" -eq 1 ]; then
+    status="PASS"
+    ROUTE_PASS=$((ROUTE_PASS + 1))
+    MODEL_PASS=$((MODEL_PASS + 1))
+  elif [ "$route_ok" -eq 1 ]; then
+    status="PASS_ROUTE"
+    ROUTE_PASS=$((ROUTE_PASS + 1))
+    WARN_COUNT=$((WARN_COUNT + 1))
+  else
+    status="FAIL"
+    ROUTE_FAIL=$((ROUTE_FAIL + 1))
+  fi
+
+  local redacted_body
+  redacted_body=$(redact_token "$body" | head -1 | head -c 120)
+
+  echo "  [$status] $name (http=$http_code, route=$route_ok, model=$model_ok, err=$error_class)"
+
+  # Append to JSON results
+  local entry
+  entry=$(printf '{"name":"%s","target":"%s","method":"%s","route_ok":%d,"model_ok":%d,"http_code":"%s","error_class":"%s","status":"%s"}' \
+    "$name" "$target" "$method" "$route_ok" "$model_ok" "$http_code" "$error_class" "$status")
+  if [ -n "$RESULTS_JSON" ]; then
+    RESULTS_JSON="${RESULTS_JSON},${entry}"
+  else
+    RESULTS_JSON="$entry"
+  fi
+}
+
+# Allowlist test runner (no HTTP)
+run_allowlist_test() {
   local name="$1" expected_result="$2"
   shift 2
   local cmd_desc="$*"
   TOTAL=$((TOTAL + 1))
 
-  local output exit_code
-  output=$(eval "$cmd_desc" 2>&1)
-  exit_code=$?
+  local output
+  output=$(eval "$cmd_desc" 2>&1) || true
+  eval "$cmd_desc" > /dev/null 2>&1
+  local exit_code=$?
 
-  local status="FAIL"
+  local status="FAIL" route_ok=0 model_ok=0 error_class="none"
+
   case "$expected_result" in
-    http_ok)
-      if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q '"choices"'; then
-        status="PASS"
-      elif [ "$exit_code" -eq 0 ] && echo "$output" | grep -q '"error"'; then
-        # API error (billing etc) but gateway DID accept — still a routing PASS
-        if echo "$output" | grep -qiE 'billing|rate.limit|credits|balance'; then
-          status="PASS"
-        fi
-      fi
-      ;;
-    http_any_200)
-      # Just needs to return a JSON response (200-level). Even errors from LLM count.
-      if [ "$exit_code" -eq 0 ] && (echo "$output" | grep -q '{' ); then
-        status="PASS"
-      fi
-      ;;
     refused)
       if echo "$output" | grep -q 'AGENT_ROUTE_REFUSED'; then
-        status="PASS"
+        status="PASS"; route_ok=1; model_ok=1
+      else
+        error_class="expected_refusal_missing"
       fi
       ;;
     allowed)
       if echo "$output" | grep -q 'AGENT_ALLOWED'; then
-        status="PASS"
-      fi
-      ;;
-    passthrough)
-      if echo "$output" | grep -qE 'OK:|__OPENCLAW_RECEIPT__'; then
-        status="PASS"
+        status="PASS"; route_ok=1; model_ok=1
+      else
+        error_class="expected_allow_missing"
       fi
       ;;
   esac
 
   if [ "$status" = "PASS" ]; then
-    PASS=$((PASS + 1))
+    ROUTE_PASS=$((ROUTE_PASS + 1))
+    MODEL_PASS=$((MODEL_PASS + 1))
   else
-    FAIL=$((FAIL + 1))
+    ROUTE_FAIL=$((ROUTE_FAIL + 1))
   fi
 
   local redacted_output
-  redacted_output=$(redact_token "$output" | head -3)
+  redacted_output=$(echo "$output" | head -1 | head -c 100)
+  echo "  [$status] $name (exit=$exit_code)"
 
-  RESULTS+=("$status|$name|$redacted_output")
-  echo "  [$status] $name"
+  local entry
+  entry=$(printf '{"name":"%s","target":"dude","method":"allowlist","route_ok":%d,"model_ok":%d,"http_code":"n/a","error_class":"%s","status":"%s"}' \
+    "$name" "$route_ok" "$model_ok" "$error_class" "$status")
+  if [ -n "$RESULTS_JSON" ]; then
+    RESULTS_JSON="${RESULTS_JSON},${entry}"
+  else
+    RESULTS_JSON="$entry"
+  fi
 }
 
-echo "=== Routing Smoke Suite — $TS ==="
+echo "=== Routing Smoke Suite (ROUTE_OK / MODEL_OK) — $TS ==="
 echo ""
 
-# ── Test 1: Builder2 HTTP — model: "openclaw/<agent>" ──
+# ── HTTP Agent Targeting (Builder2) ──
 echo "--- HTTP Agent Targeting (Builder2 port $B2_PORT) ---"
-run_test "B2 model:openclaw/$B2_KNOWN_AGENT" "http_any_200" \
+
+run_http_test "B2 model:openclaw/$B2_KNOWN_AGENT" "builder2:$B2_PORT" "model_prefix" \
   "curl -s -X POST http://${BUILDER_TS_IP}:${B2_PORT}/v1/chat/completions \
    -H 'Content-Type: application/json' \
    -H 'Authorization: Bearer ${B2_TOKEN}' \
    -d '{\"model\":\"openclaw/${B2_KNOWN_AGENT}\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply pong\"}],\"max_tokens\":5}'"
 
-# ── Test 2: Builder2 HTTP — model: "agent:<agent>" ──
-run_test "B2 model:agent:$B2_KNOWN_AGENT" "http_any_200" \
+run_http_test "B2 model:agent:$B2_KNOWN_AGENT" "builder2:$B2_PORT" "agent_prefix" \
   "curl -s -X POST http://${BUILDER_TS_IP}:${B2_PORT}/v1/chat/completions \
    -H 'Content-Type: application/json' \
    -H 'Authorization: Bearer ${B2_TOKEN}' \
    -d '{\"model\":\"agent:${B2_KNOWN_AGENT}\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply pong\"}],\"max_tokens\":5}'"
 
-# ── Test 3: Builder2 HTTP — X-OpenClaw-Agent-Id header ──
-run_test "B2 header:X-OpenClaw-Agent-Id=$B2_KNOWN_AGENT" "http_any_200" \
+run_http_test "B2 header:X-OpenClaw-Agent-Id=$B2_KNOWN_AGENT" "builder2:$B2_PORT" "header" \
   "curl -s -X POST http://${BUILDER_TS_IP}:${B2_PORT}/v1/chat/completions \
    -H 'Content-Type: application/json' \
    -H 'Authorization: Bearer ${B2_TOKEN}' \
    -H 'X-OpenClaw-Agent-Id: ${B2_KNOWN_AGENT}' \
    -d '{\"model\":\"openclaw\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply pong\"}],\"max_tokens\":5}'"
 
-# ── Test 4: Builder1 HTTP — model: "openclaw/<agent>" ──
+# ── HTTP Agent Targeting (Builder1) ──
 echo ""
 echo "--- HTTP Agent Targeting (Builder1 port $B1_PORT) ---"
-run_test "B1 model:openclaw/$B1_KNOWN_AGENT" "http_any_200" \
+
+run_http_test "B1 model:openclaw/$B1_KNOWN_AGENT" "builder1:$B1_PORT" "model_prefix" \
   "curl -s -X POST http://${BUILDER_TS_IP}:${B1_PORT}/v1/chat/completions \
    -H 'Content-Type: application/json' \
    -H 'Authorization: Bearer ${B1_TOKEN}' \
    -d '{\"model\":\"openclaw/${B1_KNOWN_AGENT}\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply pong\"}],\"max_tokens\":5}'"
 
-# ── Test 5: Dude allowlist — invalid agent REFUSED ──
+# ── Dude Allowlist Validation ──
 echo ""
 echo "--- Dude Allowlist Validation ---"
-run_test "Dude REFUSE invalid agent (builder2)" "refused" \
+
+run_allowlist_test "Dude REFUSE invalid (builder2)" "refused" \
   "python3 /root/bin/agent-allowlist-check.py builder2 ${INVALID_AGENT}"
 
-# ── Test 6: Dude allowlist — valid agent ALLOWED ──
-run_test "Dude ALLOW valid agent (builder2/$B2_KNOWN_AGENT)" "allowed" \
+run_allowlist_test "Dude ALLOW valid (builder2/$B2_KNOWN_AGENT)" "allowed" \
   "python3 /root/bin/agent-allowlist-check.py builder2 ${B2_KNOWN_AGENT}"
 
-# ── Test 7: Dude allowlist — valid agent (builder1) ALLOWED ──
-run_test "Dude ALLOW valid agent (builder1/$B1_KNOWN_AGENT)" "allowed" \
+run_allowlist_test "Dude ALLOW valid (builder1/$B1_KNOWN_AGENT)" "allowed" \
   "python3 /root/bin/agent-allowlist-check.py builder1 ${B1_KNOWN_AGENT}"
 
-# ── Test 8: Dude allowlist — invalid agent on builder1 REFUSED ──
-run_test "Dude REFUSE invalid agent (builder1)" "refused" \
+run_allowlist_test "Dude REFUSE invalid (builder1)" "refused" \
   "python3 /root/bin/agent-allowlist-check.py builder1 ${INVALID_AGENT}"
 
-# ── Test 9: Dude dispatch integration — invalid agent blocked before SSH ──
-run_test "Dude dispatch REFUSE before SSH" "refused" \
+run_allowlist_test "Dude dispatch REFUSE before SSH" "refused" \
   "OPENCLAW_VIA_JOBMGR=1 /root/bin/dispatch-to-builder.sh agent-task ${INVALID_AGENT} 'smoke test'"
 
 # ── Summary ──
 echo ""
-echo "=== SUMMARY ==="
-echo "Total: $TOTAL  Pass: $PASS  Fail: $FAIL"
-if [ "$FAIL" -eq 0 ]; then
-  echo "RESULT: ALL PASS"
-else
-  echo "RESULT: $FAIL FAILURES"
+echo "========================================="
+echo "  ROUTE_OK: $ROUTE_PASS / $TOTAL"
+echo "  MODEL_OK: $MODEL_PASS / $TOTAL"
+echo "  Warnings: $WARN_COUNT (route ok, model failed)"
+echo "  Failures: $ROUTE_FAIL (route failed)"
+echo "========================================="
+
+VERDICT="ALL_PASS"
+EXIT_CODE=0
+if [ "$ROUTE_FAIL" -gt 0 ]; then
+  VERDICT="FAIL"
+  EXIT_CODE=1
+elif [ "$WARN_COUNT" -gt 0 ]; then
+  VERDICT="WARN_ROUTE_ONLY"
+  EXIT_CODE=0
 fi
+echo "VERDICT: $VERDICT"
 
-# ── JSON Log (no secrets) ──
+# ── JSON Log ──
 {
-  echo "{"
-  echo "  \"timestamp\": \"$TS\","
-  echo "  \"total\": $TOTAL,"
-  echo "  \"pass\": $PASS,"
-  echo "  \"fail\": $FAIL,"
-  echo "  \"builder_ts_ip\": \"$BUILDER_TS_IP\","
-  echo "  \"b1_port\": $B1_PORT,"
-  echo "  \"b2_port\": $B2_PORT,"
-  echo "  \"results\": ["
-  _first=true
-  for r in "${RESULTS[@]}"; do
-    IFS='|' read -r rstatus rname routput <<< "$r"
-    routput_escaped=$(echo "$routput" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ' | head -c 200)
-    if [ "$_first" = true ]; then
-      _first=false
-    else
-      echo "    ,"
-    fi
-    echo "    {\"status\": \"$rstatus\", \"name\": \"$rname\", \"output_excerpt\": \"$routput_escaped\"}"
-  done
-  echo "  ]"
-  echo "}"
+  printf '{\n'
+  printf '  "timestamp": "%s",\n' "$TS"
+  printf '  "total": %d,\n' "$TOTAL"
+  printf '  "route_pass": %d,\n' "$ROUTE_PASS"
+  printf '  "model_pass": %d,\n' "$MODEL_PASS"
+  printf '  "route_fail": %d,\n' "$ROUTE_FAIL"
+  printf '  "warn_count": %d,\n' "$WARN_COUNT"
+  printf '  "verdict": "%s",\n' "$VERDICT"
+  printf '  "builder_ts_ip": "%s",\n' "$BUILDER_TS_IP"
+  printf '  "b1_port": %d,\n' "$B1_PORT"
+  printf '  "b2_port": %d,\n' "$B2_PORT"
+  printf '  "results": [%s]\n' "$RESULTS_JSON"
+  printf '}\n'
 } > "$LOG_FILE"
-
 echo ""
 echo "JSON log: $LOG_FILE"
 
 # ── Proof Markdown ──
 mkdir -p "$PROOF_DIR"
 {
-  echo "# Proof: Routing Smoke Suite"
+  echo "# Proof: Routing Smoke Suite (ROUTE_OK / MODEL_OK)"
   echo ""
   echo "**Date:** $TS"
-  echo "**Scope:** E2E routing validation — HTTP agent targeting + Dude allowlist"
+  echo "**Branch:** $(cd /home/openclaw/staging/current && su -s /bin/bash openclaw -c 'git rev-parse --abbrev-ref HEAD' 2>/dev/null || echo 'unknown')"
+  echo "**HEAD:** $(cd /home/openclaw/staging/current && su -s /bin/bash openclaw -c 'git rev-parse --short HEAD' 2>/dev/null || echo 'unknown')"
   echo ""
   echo "---"
   echo ""
-  echo "## Summary"
+  echo "## Verdict: $VERDICT"
   echo ""
   echo "| Metric | Value |"
   echo "|--------|-------|"
   echo "| Total tests | $TOTAL |"
-  echo "| Pass | $PASS |"
-  echo "| Fail | $FAIL |"
-  echo "| Result | $([ $FAIL -eq 0 ] && echo 'ALL PASS' || echo "$FAIL FAILURES") |"
+  echo "| ROUTE_OK | $ROUTE_PASS / $TOTAL |"
+  echo "| MODEL_OK | $MODEL_PASS / $TOTAL |"
+  echo "| Warnings (route ok, model failed) | $WARN_COUNT |"
+  echo "| Failures (route failed) | $ROUTE_FAIL |"
+  echo ""
+  echo "## Semantics"
+  echo ""
+  echo "- **PASS** = ROUTE_OK + MODEL_OK (gateway accepted, LLM responded normally)"
+  echo "- **PASS_ROUTE** = ROUTE_OK only (gateway accepted, but LLM provider error e.g. billing)"
+  echo "- **FAIL** = ROUTE_OK failed (gateway unreachable, auth rejected, etc.)"
   echo ""
   echo "## Test Results"
   echo ""
-  echo "| # | Status | Test | Output Excerpt |"
-  echo "|---|--------|------|----------------|"
-  _i=1
-  for r in "${RESULTS[@]}"; do
-    IFS='|' read -r rstatus rname routput <<< "$r"
-    routput_short=$(echo "$routput" | head -1 | head -c 80)
-    echo "| $_i | $rstatus | $rname | \`$routput_short\` |"
-    _i=$((_i + 1))
-  done
+  echo "| # | Status | Test | HTTP | Route | Model | Error |"
+  echo "|---|--------|------|------|-------|-------|-------|"
+  # Parse JSON results for table
+  python3 -c "
+import sys, json
+data = json.loads('[' + sys.argv[1] + ']')
+for i, r in enumerate(data, 1):
+    print(f'| {i} | {r[\"status\"]} | {r[\"name\"]} | {r[\"http_code\"]} | {r[\"route_ok\"]} | {r[\"model_ok\"]} | {r[\"error_class\"]} |')
+" "$RESULTS_JSON" 2>/dev/null || echo "| - | - | (table generation failed) | - | - | - | - |"
   echo ""
   echo "## Infrastructure"
   echo ""
   echo "- **Builder Tailscale IP:** $BUILDER_TS_IP"
-  echo "- **Builder1 port:** $B1_PORT (gateway, \`--bind tailnet\`)"
-  echo "- **Builder2 port:** $B2_PORT (gateway, \`--bind tailnet\`)"
-  echo "- **Auth:** Token-based (Bearer header, [REDACTED])"
-  echo "- **Dude allowlist:** /root/bin/agent-allowlist.json"
-  echo "- **Dude dispatch:** /root/bin/dispatch-to-builder.sh (patched 2026-02-21)"
-  echo ""
-  echo "## Agent Targeting Methods Verified"
-  echo ""
-  echo "1. \`model: \"openclaw/<agent_id>\"\` — WORKS"
-  echo "2. \`model: \"agent:<agent_id>\"\` — WORKS"
-  echo "3. \`X-OpenClaw-Agent-Id\` header — WORKS"
-  echo "4. Dude allowlist (fail-closed) — WORKS"
-  echo "5. Invalid agent via Dude — REFUSED (exit 1, AGENT_ROUTE_REFUSED)"
-  echo ""
-  echo "## Files Modified"
-  echo ""
-  echo "- \`/root/bin/agent-allowlist.json\` — new config file"
-  echo "- \`/root/bin/agent-allowlist-check.py\` — new validation script"
-  echo "- \`/root/bin/dispatch-to-builder.sh\` — patched with AGENT_ALLOWLIST_GUARD"
+  echo "- **Builder1 port:** $B1_PORT (\`--bind tailnet\`)"
+  echo "- **Builder2 port:** $B2_PORT (\`--bind tailnet\`)"
+  echo "- **Auth:** Token-based (Bearer, [REDACTED])"
+  echo "- **Dude allowlist:** /root/bin/agent-allowlist.json (installed from ops/dude/)"
   echo ""
   echo "## JSON Log"
   echo ""
@@ -265,5 +325,4 @@ mkdir -p "$PROOF_DIR"
 
 echo "Proof: $PROOF_FILE"
 
-# Exit with overall result
-[ "$FAIL" -eq 0 ] && exit 0 || exit 1
+exit $EXIT_CODE
