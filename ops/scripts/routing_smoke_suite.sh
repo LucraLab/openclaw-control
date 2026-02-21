@@ -14,6 +14,11 @@
 #   FAIL if any required ROUTE_OK check fails
 #   WARN (exit 0) if ROUTE_OK passes but MODEL_OK fails
 #
+# Pre-flight: provider-drift-sentinel.sh runs first (fail-closed)
+#   exit 2 → smoke fails immediately (drift detected)
+#   exit 1 → smoke continues with WARN banner
+#   exit 0 → smoke proceeds normally
+#
 # Output:
 #   - PASS/FAIL/WARN summary to stdout
 #   - JSON log to /tmp/routing-smoke-<ts>.json
@@ -25,8 +30,41 @@ set -uo pipefail
 
 TS=$(date -u +%Y-%m-%dT%H%M%SZ)
 LOG_FILE="/tmp/routing-smoke-${TS}.json"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROOF_DIR="/home/openclaw/staging/current/ops/proofs"
 PROOF_FILE="${PROOF_DIR}/PROOF_ROUTING_SMOKE_SUITE_ROUTE_VS_MODEL_${TS}.md"
+SENTINEL="${SCRIPT_DIR}/provider-drift-sentinel.sh"
+
+# ── Pre-flight: Provider Drift Sentinel ──
+SENTINEL_VERDICT="SKIPPED"
+if [ -f "$SENTINEL" ]; then
+  echo "=== Pre-flight: Provider Drift Sentinel ==="
+  SENTINEL_EXIT=0
+  bash "$SENTINEL" || SENTINEL_EXIT=$?
+
+  if [ "$SENTINEL_EXIT" -eq 2 ]; then
+    echo ""
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "  SMOKE ABORTED: Provider drift detected (exit 2)"
+    echo "  Fix the drift condition before running smoke."
+    echo "  See sentinel output above for details."
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    SENTINEL_VERDICT="FAIL"
+    exit 1
+  elif [ "$SENTINEL_EXIT" -eq 1 ]; then
+    echo ""
+    echo "=== WARN: Sentinel detected upstream provider ==="
+    echo "=== issues (MODEL_OK=0). Smoke continues but  ==="
+    echo "=== expect PASS_ROUTE results.                 ==="
+    SENTINEL_VERDICT="WARN"
+  else
+    SENTINEL_VERDICT="OK"
+  fi
+  echo ""
+else
+  echo "[INFO] Sentinel not found at $SENTINEL — skipping pre-flight"
+  echo ""
+fi
 
 # Builder connectivity
 BUILDER_TS_IP="100.75.216.57"
@@ -239,6 +277,7 @@ echo "  ROUTE_OK: $ROUTE_PASS / $TOTAL"
 echo "  MODEL_OK: $MODEL_PASS / $TOTAL"
 echo "  Warnings: $WARN_COUNT (route ok, model failed)"
 echo "  Failures: $ROUTE_FAIL (route failed)"
+echo "  Sentinel: $SENTINEL_VERDICT"
 echo "========================================="
 
 VERDICT="ALL_PASS"
@@ -261,6 +300,7 @@ echo "VERDICT: $VERDICT"
   printf '  "model_pass": %d,\n' "$MODEL_PASS"
   printf '  "route_fail": %d,\n' "$ROUTE_FAIL"
   printf '  "warn_count": %d,\n' "$WARN_COUNT"
+  printf '  "sentinel_verdict": "%s",\n' "$SENTINEL_VERDICT"
   printf '  "verdict": "%s",\n' "$VERDICT"
   printf '  "builder_ts_ip": "%s",\n' "$BUILDER_TS_IP"
   printf '  "b1_port": %d,\n' "$B1_PORT"
@@ -291,6 +331,13 @@ mkdir -p "$PROOF_DIR"
   echo "| MODEL_OK | $MODEL_PASS / $TOTAL |"
   echo "| Warnings (route ok, model failed) | $WARN_COUNT |"
   echo "| Failures (route failed) | $ROUTE_FAIL |"
+  echo "| Sentinel pre-flight | $SENTINEL_VERDICT |"
+  echo ""
+  echo "## Pre-flight: Provider Drift Sentinel"
+  echo ""
+  echo "- **Verdict:** $SENTINEL_VERDICT"
+  echo "- Checks: provider chain diversity, OPENAI_BASE_URL, live MODEL_OK"
+  echo "- If FAIL (exit 2): smoke aborts immediately — drift must be fixed first"
   echo ""
   echo "## Semantics"
   echo ""
