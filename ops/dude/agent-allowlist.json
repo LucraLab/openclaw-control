@@ -1,0 +1,46 @@
+{
+  "_comment": "Agent allowlist for Dude → Builder dispatch. Fail-closed: unknown agents are REFUSED at Dashboard before SSH.",
+  "_location": "/root/bin/agent-allowlist.json",
+  "_updated": "2026-02-21",
+  "_source": "Derived from openclaw.json on each Builder (Phase 0 baseline proof)",
+  "builder1": {
+    "host_ref": "builder_host",
+    "tailscale_port": 8080,
+    "agents": [
+      "main",
+      "vault",
+      "finance",
+      "scrooge",
+      "ops-1",
+      "architect",
+      "developer",
+      "debugger",
+      "quality-reviewer",
+      "technical-writer",
+      "crystal-pa",
+      "cs",
+      "insights",
+      "pa",
+      "rental",
+      "sales"
+    ]
+  },
+  "builder2": {
+    "host_ref": "builder_host",
+    "tailscale_port": 8082,
+    "agents": [
+      "main",
+      "pa",
+      "sales",
+      "cs",
+      "rental",
+      "insights",
+      "crystal-pa",
+      "ops-2"
+    ]
+  },
+  "defaults": {
+    "fallback_agent": "main",
+    "refuse_unknown": true
+  }
+}
