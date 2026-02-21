@@ -16,7 +16,8 @@
 #
 # Pre-flight: provider-drift-sentinel.sh runs first (fail-closed)
 #   exit 2 → smoke fails immediately (drift detected)
-#   exit 1 → smoke continues with WARN banner
+#   exit 1 → smoke continues with WARN banner (default)
+#            OR aborts if SENTINEL_WARN_IS_FAIL=1 (strict mode)
 #   exit 0 → smoke proceeds normally
 #
 # Output:
@@ -52,6 +53,18 @@ if [ -f "$SENTINEL" ]; then
     SENTINEL_VERDICT="FAIL"
     exit 1
   elif [ "$SENTINEL_EXIT" -eq 1 ]; then
+    WARN_IS_FAIL="${SENTINEL_WARN_IS_FAIL:-0}"
+    if [ "$WARN_IS_FAIL" = "1" ]; then
+      echo ""
+      echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+      echo "  SMOKE ABORTED: Sentinel WARN + strict mode"
+      echo "  SENTINEL_WARN_IS_FAIL=1 treats WARN as FAIL."
+      echo "  SENTINEL_WARN_POLICY_FAIL=1"
+      echo "  See sentinel output above for details."
+      echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+      SENTINEL_VERDICT="WARN_STRICT_FAIL"
+      exit 2
+    fi
     echo ""
     echo "=== WARN: Sentinel detected upstream provider ==="
     echo "=== issues (MODEL_OK=0). Smoke continues but  ==="

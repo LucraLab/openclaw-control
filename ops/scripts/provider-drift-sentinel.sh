@@ -14,6 +14,7 @@
 #
 # Environment overrides (for selftest simulation):
 #   SENTINEL_SIMULATE=baseline_dead_chain  — simulate the prior incident
+#   SENTINEL_SIMULATE=warn_upstream        — simulate upstream provider issue (exit 1)
 #   SENTINEL_DRY_RUN=1                     — skip live HTTP checks
 #
 # Output:
@@ -121,6 +122,15 @@ if [ "$SIMULATE" = "baseline_dead_chain" ]; then
   OPENAI_BASEURL_SOURCE="simulation"
   echo "  [SIM] Chain: primary=$CHAIN_PRIMARY fallbacks=$CHAIN_FALLBACKS"
   echo "  [SIM] OPENAI_BASE_URL=$OPENAI_BASEURL"
+elif [ "$SIMULATE" = "warn_upstream" ]; then
+  # Simulate: config is healthy but upstream providers are billing-dead
+  # Chain includes openai/gpt-4o (passes drift checks) but live check = MODEL_OK=0
+  CHAIN_PRIMARY="moonshot/kimi-k2.5"
+  CHAIN_FALLBACKS='["anthropic/claude-opus-4-6", "openai/gpt-4o"]'
+  OPENAI_BASEURL="https://api.openai.com/v1"
+  OPENAI_BASEURL_SOURCE="simulation"
+  echo "  [SIM] Chain: primary=$CHAIN_PRIMARY fallbacks=$CHAIN_FALLBACKS"
+  echo "  [SIM] OPENAI_BASE_URL=$OPENAI_BASEURL (healthy config, upstream dead)"
 else
   # Read real config from Builder VPS
   CHAIN_JSON=$(ssh "${BUILDER_SSH_USER}@${BUILDER_SSH_HOST}" \
@@ -282,7 +292,16 @@ run_live_check() {
   echo "$http_code $route_ok $model_ok $error_class"
 }
 
-if [ "$DRY_RUN" = "1" ] || [ -n "$SIMULATE" ]; then
+if [ "$SIMULATE" = "warn_upstream" ]; then
+  # Simulate: route works but models are billing-dead → WARN
+  echo "  [SIM] Builder1: route_ok=1 model_ok=0 (simulated upstream billing)"
+  echo "  [SIM] Builder2: route_ok=1 model_ok=0 (simulated upstream billing)"
+  B1_HTTP="SIM" B1_ROUTE_OK=1 B1_MODEL_OK=0 B1_ERROR_CLASS="provider_billing"
+  B2_HTTP="SIM" B2_ROUTE_OK=1 B2_MODEL_OK=0 B2_ERROR_CLASS="provider_billing"
+  add_check "live_b1" "WARN" "Simulated: route=1 model=0 err=provider_billing"
+  add_check "live_b2" "WARN" "Simulated: route=1 model=0 err=provider_billing"
+  add_warn "MODEL_WARN"
+elif [ "$DRY_RUN" = "1" ] || [ -n "$SIMULATE" ]; then
   echo "  [SIM/DRY] Skipping live HTTP checks"
   B1_HTTP="SIM" B1_ROUTE_OK=0 B1_MODEL_OK=0 B1_ERROR_CLASS="simulated"
   B2_HTTP="SIM" B2_ROUTE_OK=0 B2_MODEL_OK=0 B2_ERROR_CLASS="simulated"
