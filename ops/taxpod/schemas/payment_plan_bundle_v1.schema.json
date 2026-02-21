@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "payment_plan_bundle_v1/bundle_manifest",
+  "title": "PaymentPlanBundleV1 — Bundle Manifest",
+  "description": "Integrity manifest for a frozen PaymentPlanBundleV1 export. Written last, contains sha256 hashes of all other bundle files.",
+  "type": "object",
+  "required": ["bundle_version", "case_id", "export_utc", "vault_version", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "bundle_version": {
+      "type": "string",
+      "const": "payment_plan_bundle_v1"
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "export_utc": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z$"
+    },
+    "vault_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "files": {
+      "type": "object",
+      "required": [
+        "citations.json",
+        "liability_snapshot.json",
+        "notices_manifest.json",
+        "supporting_docs_index.json",
+        "transcripts_manifest.json"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "citations.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "liability_snapshot.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "notices_manifest.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "supporting_docs_index.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "transcripts_manifest.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "bundle_version": "payment_plan_bundle_v1",
+  "case_id": "case_demo_tn",
+  "export_utc": "20260221T000000Z",
+  "vault_version": "13.2.0",
+  "files": {
+    "citations.json": "13830c63a13348dcd498bf7edae3697f6442876f3344c6528954529936fef56e",
+    "liability_snapshot.json": "41aa759c1e9cfb712927f2a005851dba896a2dd35756664d7f2cbacff2695a6f",
+    "notices_manifest.json": "20422ebc244f58e8f5fd6103b9ac82f078afe04ac26dd5c4a69027e2ceb6905e",
+    "supporting_docs_index.json": "80f778cf10ca79c6803bf3c31011f525a27053e31966e1fb0372a111f43a5139",
+    "transcripts_manifest.json": "877eda704e5ce61ebe608e7298e8e47e776438afb15406459703ca75e5f6c1d0"
+  }
+}

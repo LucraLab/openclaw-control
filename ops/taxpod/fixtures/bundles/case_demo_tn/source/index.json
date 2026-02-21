@@ -1,0 +1,63 @@
+{
+  "corr_id": "FIXTURE-TN-001",
+  "ts": "2026-02-21T00:00:00.000Z",
+  "counts": {
+    "total_inventory_items": 4,
+    "indexed_active": 3,
+    "tombstoned_removed": 1
+  },
+  "entries": [
+    {
+      "id": "tn_transcript_2021",
+      "name": "2021_IRS_Account_Transcript.pdf",
+      "mimeType": "application/pdf",
+      "path": "/2021/2021_IRS_Account_Transcript.pdf",
+      "parents": ["folder_2021"],
+      "size": null,
+      "md5Checksum": null,
+      "modifiedTime": "2026-02-17T05:00:00.000Z",
+      "year_hint": "2021",
+      "doc_kind_hint": null,
+      "status": "active"
+    },
+    {
+      "id": "tn_notice_cp2000_2021",
+      "name": "2021_IRS_Notice_CP2000.pdf",
+      "mimeType": "application/pdf",
+      "path": "/2021/2021_IRS_Notice_CP2000.pdf",
+      "parents": ["folder_2021"],
+      "size": null,
+      "md5Checksum": null,
+      "modifiedTime": "2026-02-17T06:00:00.000Z",
+      "year_hint": "2021",
+      "doc_kind_hint": null,
+      "status": "active"
+    },
+    {
+      "id": "tn_w2_2021",
+      "name": "2021_W-2_Employer.pdf",
+      "mimeType": "application/pdf",
+      "path": "/2021/2021_W-2_Employer.pdf",
+      "parents": ["folder_2021"],
+      "size": null,
+      "md5Checksum": null,
+      "modifiedTime": "2026-02-17T03:51:09.193Z",
+      "year_hint": "2021",
+      "doc_kind_hint": null,
+      "status": "active"
+    },
+    {
+      "id": "tn_removed_draft",
+      "name": "2021_old_draft.pdf",
+      "mimeType": "application/pdf",
+      "path": "/2021/2021_old_draft.pdf",
+      "parents": ["folder_2021"],
+      "size": null,
+      "md5Checksum": null,
+      "modifiedTime": "2026-02-17T08:00:00.000Z",
+      "year_hint": "2021",
+      "doc_kind_hint": null,
+      "status": "removed"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "case_id": "case_demo_tn",
+  "tax_years": [
+    {
+      "year": 2021,
+      "tax_owed": 0,
+      "penalty": 0,
+      "interest": 0,
+      "total_liability": 0,
+      "filing_status": "unknown",
+      "agi": 0,
+      "wages": 65000,
+      "withholding": 9100,
+      "flags": [],
+      "sources": [
+        "FCT-TN-001",
+        "FCT-TN-002"
+      ]
+    }
+  ],
+  "generated_utc": "20260221T000000Z",
+  "vault_version": "13.2.0"
+}

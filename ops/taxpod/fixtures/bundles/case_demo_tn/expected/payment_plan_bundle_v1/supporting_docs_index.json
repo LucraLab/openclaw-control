@@ -1,0 +1,14 @@
+{
+  "case_id": "case_demo_tn",
+  "documents": [
+    {
+      "id": "tn_w2_2021",
+      "name": "2021_W-2_Employer.pdf",
+      "year_hint": "2021",
+      "path": "/2021/2021_W-2_Employer.pdf",
+      "sha256": "976c2fe562d729f40302acf011d0af6ae91202f7ed82ca7ad2a879ed4042881c",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T03:51:09.193Z"
+    }
+  ]
+}
