@@ -1,0 +1,100 @@
+{
+  "version": "ApplyAllowlistV1",
+  "description": "Defines what the Apply Door is permitted to write. Anything not listed here is refused.",
+  "allowed_action_types": {
+    "PATCH_JSON": {
+      "allowed_ops": ["replace", "add"],
+      "refused_ops": ["remove", "move", "copy", "test"],
+      "notes": "V1 only allows replace and add. Destructive ops are refused."
+    },
+    "ADD_FLAG": {
+      "notes": "Appends a flag to the artifact's risk_flags array. Non-destructive."
+    },
+    "REMOVE_FLAG": {
+      "notes": "Removes a flag from risk_flags array. Non-destructive (array shrink only). V1 supported."
+    },
+    "ADD_DOC_REFERENCE": {
+      "notes": "Writes a reference metadata stub only. No file copies."
+    },
+    "REQUIRE_REEXPORT_BUNDLE": {
+      "notes": "Cascade marker only. No artifact mutation. Writes marker file."
+    },
+    "REQUIRE_RERUN_PORT1": {
+      "notes": "Cascade marker only. Writes marker file."
+    },
+    "REQUIRE_RERUN_PORT2": {
+      "notes": "Cascade marker only. Writes marker file."
+    },
+    "REQUIRE_REBUILD_PORT3": {
+      "notes": "Cascade marker only. Writes marker file."
+    }
+  },
+  "refused_action_types": {
+    "RECLASSIFY_DOC": "Refused in V1. Too risky without full doc pipeline."
+  },
+  "allowed_artifacts": {
+    "PAYMENT_MODEL": {
+      "runtime_path": "models/payment_plan_model.json",
+      "allowed_path_prefixes": [
+        "/derived/",
+        "/intake_summary/",
+        "/liability_summary/tax_years/",
+        "/liability_summary/total_",
+        "/monthly_capacity/",
+        "/risk_flags"
+      ],
+      "refused_path_prefixes": [
+        "/version",
+        "/case_id",
+        "/as_of_utc"
+      ],
+      "notes": "Allow patching derived totals, intake summary totals, liability year data, capacity figures. Refuse identity fields."
+    },
+    "STRATEGY": {
+      "runtime_path": "strategy/strategy_recommendation.json",
+      "allowed_path_prefixes": [
+        "/risk_flags",
+        "/assumptions",
+        "/strategy/why_this_strategy",
+        "/strategy/why_not_others",
+        "/execution/"
+      ],
+      "refused_path_prefixes": [
+        "/version",
+        "/case_id",
+        "/as_of_utc",
+        "/inputs/"
+      ],
+      "notes": "Allow patching flags, assumptions, strategy notes. Refuse identity and input reference fields."
+    },
+    "LIABILITY_SNAPSHOT": {
+      "runtime_path": "models/payment_plan_model.json",
+      "json_root": "/liability_summary",
+      "allowed_path_prefixes": [
+        "/liability_summary/tax_years/",
+        "/liability_summary/total_"
+      ],
+      "refused_path_prefixes": [
+        "/version",
+        "/case_id",
+        "/as_of_utc"
+      ],
+      "notes": "LIABILITY_SNAPSHOT patches target the liability_summary section of payment_plan_model.json. Refuse creating new tax year entries in V1."
+    },
+    "PACKAGE": {
+      "runtime_path": null,
+      "notes": "REFUSED. Package is a PORT3 output artifact. Do not patch — rebuild PORT3 instead."
+    }
+  },
+  "allowed_write_roots": [
+    "/home/openclaw/.openclaw/tax_work/<CASE_ID>/",
+    "/home/openclaw/.openclaw/tax_work/<CASE_ID>/audit/",
+    "/home/openclaw/.openclaw/audit/"
+  ],
+  "exit_codes": {
+    "0": "APPLIED — all actions applied successfully",
+    "2": "REFUSED_VALIDATION — schema invalid, disallowed path, disallowed action, destructive op, or drift detected",
+    "3": "REFUSED_APPROVAL — missing or invalid approval proof",
+    "4": "INTERNAL_ERROR — unexpected failure; no partial writes"
+  }
+}

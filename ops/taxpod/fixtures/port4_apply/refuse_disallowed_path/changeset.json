@@ -1,0 +1,33 @@
+{
+  "version": "ChangeSetV1",
+  "changeset_id": "fixture_case_cs_20260222T120000Z",
+  "case_id": "fixture_case",
+  "created_utc": "20260222T120000Z",
+  "source_feedback_id": "fixture_case_fb_20260222T110000Z",
+  "package_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "actions": [
+    {
+      "action_id": "act_001",
+      "source_item_id": "item_001",
+      "action_type": "PATCH_JSON",
+      "target": {
+        "artifact": "LIABILITY_SNAPSHOT",
+        "path": "/version",
+        "year": 2022
+      },
+      "patch": {
+        "op": "replace",
+        "path": "/version",
+        "value": "HACKED",
+        "old_value": "PaymentPlanModelV1"
+      },
+      "reason": "Attempt to patch a refused path.",
+      "requires_human_approval": true
+    }
+  ],
+  "derived_impacts": [],
+  "audit": {
+    "input_feedback_sha256": "",
+    "changeset_sha256": ""
+  }
+}
