@@ -37,7 +37,7 @@
     "REQUIRE_REEXPORT_BUNDLE"
   ],
   "audit": {
-    "input_feedback_sha256": "",
-    "changeset_sha256": ""
+    "input_feedback_sha256": "e9fd89fa65c044bc749d8d58d9184094a83b48c863f6c0505cea00057b5f7565",
+    "changeset_sha256": "3f39bcb27bb485a18ffaa7f9c54779aca935e70808c3c1dd4033f5e43d4c7c06"
   }
 }
