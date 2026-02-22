@@ -1,0 +1,15 @@
+{
+  "case_id": "case_demo_package",
+  "transcripts": [
+    {
+      "id": "pkg_transcript_2022",
+      "name": "2022_IRS_Account_Transcript.pdf",
+      "year_hint": "2022",
+      "path": "/2022/2022_IRS_Account_Transcript.pdf",
+      "sha256": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T05:00:00.000Z",
+      "doc_type": "transcript"
+    }
+  ]
+}

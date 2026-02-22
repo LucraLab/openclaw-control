@@ -1,0 +1,20 @@
+{
+  "case_id": "case_demo_package",
+  "tax_years": [
+    {
+      "year": 2022,
+      "tax_owed": 5000,
+      "penalty": 400,
+      "interest": 250,
+      "total_liability": 5650,
+      "filing_status": "single",
+      "agi": 52000,
+      "wages": 52000,
+      "withholding": 7800,
+      "flags": [],
+      "sources": ["FCT-PKG01"]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}
