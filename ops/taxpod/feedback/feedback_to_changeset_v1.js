@@ -46,10 +46,17 @@ function die(code, reason) {
 
 // ─── Path conversion ──────────────────────────────────────────
 // Converts CPA-style paths like "tax_years[year=2022].interest"
-// to RFC6901 JSON pointers like "/tax_years/0/interest".
+// to RFC6901 JSON pointers like "/liability_summary/tax_years/0/interest".
 // The array index is always 0 since we target the first matching year.
+// The json_root prefix (e.g. /liability_summary) is prepended based on
+// the artifact type — this ensures the pointer resolves correctly against
+// the actual runtime JSON file (e.g. payment_plan_model.json).
 
-function feedbackPathToJsonPointer(fbPath) {
+const ARTIFACT_JSON_ROOT = {
+  LIABILITY_SNAPSHOT: '/liability_summary',
+};
+
+function feedbackPathToJsonPointer(fbPath, artifact) {
   if (!fbPath) return undefined;
   // Replace array bracket notation: tax_years[year=2022] → tax_years/0
   let p = fbPath.replace(/\[year=\d+\]/g, '/0');
@@ -57,6 +64,9 @@ function feedbackPathToJsonPointer(fbPath) {
   p = p.replace(/\./g, '/');
   // Ensure leading slash
   if (!p.startsWith('/')) p = '/' + p;
+  // Prepend artifact json_root if applicable
+  const root = ARTIFACT_JSON_ROOT[artifact];
+  if (root) p = root + p;
   return p;
 }
 
@@ -125,7 +135,7 @@ const CASCADE_RULES = {
 
 function generateActions_LIABILITY_CORRECTION(item) {
   const actions = [];
-  const jsonPointer = feedbackPathToJsonPointer(item.target.path);
+  const jsonPointer = feedbackPathToJsonPointer(item.target.path, item.target.artifact);
 
   actions.push({
     action_type: 'PATCH_JSON',
@@ -189,7 +199,7 @@ function generateActions_DISPUTE_OR_UNCERTAIN(item) {
 }
 
 function generateActions_STRATEGY_OVERRIDE_NOTE(item) {
-  const jsonPointer = feedbackPathToJsonPointer(item.target.path);
+  const jsonPointer = feedbackPathToJsonPointer(item.target.path, item.target.artifact);
 
   return [{
     action_type: 'PATCH_JSON',
@@ -210,7 +220,7 @@ function generateActions_STRATEGY_OVERRIDE_NOTE(item) {
 }
 
 function generateActions_PAYMENT_CAPACITY_ASSUMPTION_FIX(item) {
-  const jsonPointer = feedbackPathToJsonPointer(item.target.path);
+  const jsonPointer = feedbackPathToJsonPointer(item.target.path, item.target.artifact);
 
   return [{
     action_type: 'PATCH_JSON',

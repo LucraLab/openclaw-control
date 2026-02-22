@@ -10,5 +10,9 @@
     "MD040": false,
     "MD041": false,
     "MD058": false
-  }
+  },
+  "ignores": [
+    "ops/proofs/**",
+    "proofs/**"
+  ]
 }
