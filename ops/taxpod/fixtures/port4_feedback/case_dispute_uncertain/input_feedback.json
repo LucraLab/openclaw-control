@@ -1,0 +1,30 @@
+{
+  "version": "FeedbackV1",
+  "feedback_id": "case_demo_package_fb_20260222T160000Z",
+  "case_id": "case_demo_package",
+  "source": "CPA",
+  "received_utc": "20260222T160000Z",
+  "package_manifest_sha256": "df4e7c8cbe06c4992cffa374fe7ae4d8ab9423c338432a9c4e086f52c5fe3a92",
+  "items": [
+    {
+      "item_id": "item_001",
+      "type": "DISPUTE_OR_UNCERTAIN",
+      "target": {
+        "artifact": "PACKAGE",
+        "year": 2020
+      },
+      "proposed_change": {
+        "flag": "NEEDS_VERIFICATION",
+        "scope": "filing_status",
+        "year_hint": "2020",
+        "reason": "Not sure if 2020 return was filed. IRS account transcript for 2020 is not in the package. Need to verify transcript before proceeding with strategy."
+      },
+      "evidence": {
+        "notes": "CPA notes: client believes 2020 was filed but cannot locate confirmation. No 2020 transcript in current bundle. Must verify before any strategy that assumes all years are filed.",
+        "attachments": [],
+        "confidence": "LOW"
+      },
+      "requires_human_approval": true
+    }
+  ]
+}

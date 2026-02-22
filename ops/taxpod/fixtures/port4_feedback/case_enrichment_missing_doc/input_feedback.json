@@ -1,0 +1,50 @@
+{
+  "version": "FeedbackV1",
+  "feedback_id": "case_demo_package_fb_20260222T150000Z",
+  "case_id": "case_demo_package",
+  "source": "CPA",
+  "received_utc": "20260222T150000Z",
+  "package_manifest_sha256": "df4e7c8cbe06c4992cffa374fe7ae4d8ab9423c338432a9c4e086f52c5fe3a92",
+  "items": [
+    {
+      "item_id": "item_001",
+      "type": "MISSING_DOC",
+      "target": {
+        "artifact": "PACKAGE",
+        "year": 2021
+      },
+      "proposed_change": {
+        "doc_type": "transcript",
+        "doc_name": "2021_IRS_Account_Transcript.pdf",
+        "year_hint": "2021",
+        "reason": "Package only contains 2022 transcript. Need 2021 account transcript to verify prior year filing status and confirm no outstanding balance."
+      },
+      "evidence": {
+        "notes": "Current package has only a 2022 transcript reference. The 2021 account transcript is needed to verify prior year compliance and confirm the CP2000 assessment basis.",
+        "attachments": [],
+        "confidence": "HIGH"
+      },
+      "requires_human_approval": true
+    },
+    {
+      "item_id": "item_002",
+      "type": "MISSING_DOC",
+      "target": {
+        "artifact": "PACKAGE",
+        "year": 2022
+      },
+      "proposed_change": {
+        "doc_type": "notice",
+        "doc_name": "2022_IRS_Notice_CP2000_Response.pdf",
+        "year_hint": "2022",
+        "reason": "Need the CP2000 response letter if one was sent. This confirms whether the taxpayer agreed or disputed the proposed assessment."
+      },
+      "evidence": {
+        "notes": "Package has CP2000 notice but no response letter. If taxpayer responded, we need that document for strategy planning.",
+        "attachments": ["cp2000_response_scan.pdf"],
+        "confidence": "MED"
+      },
+      "requires_human_approval": true
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "version": "ChangeSetV1",
+  "changeset_id": "case_demo_package_cs_20260222T140100Z",
+  "case_id": "case_demo_package",
+  "created_utc": "20260222T140100Z",
+  "source_feedback_id": "case_demo_package_fb_20260222T140000Z",
+  "package_manifest_sha256": "df4e7c8cbe06c4992cffa374fe7ae4d8ab9423c338432a9c4e086f52c5fe3a92",
+  "actions": [
+    {
+      "action_id": "act_001",
+      "source_item_id": "item_001",
+      "action_type": "PATCH_JSON",
+      "target": {
+        "artifact": "LIABILITY_SNAPSHOT",
+        "path": "/tax_years/0/interest",
+        "year": 2022
+      },
+      "patch": {
+        "op": "replace",
+        "path": "/tax_years/0/interest",
+        "value": 475,
+        "old_value": 250
+      },
+      "reason": "CP2000 assessed interest line item missing. IRS transcript shows $475 interest accrued for TY2022, not $250 as originally reported.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_002",
+      "source_item_id": "item_002",
+      "action_type": "PATCH_JSON",
+      "target": {
+        "artifact": "LIABILITY_SNAPSHOT",
+        "path": "/tax_years/0/total_liability",
+        "year": 2022
+      },
+      "patch": {
+        "op": "replace",
+        "path": "/tax_years/0/total_liability",
+        "value": 5875,
+        "old_value": 5650
+      },
+      "reason": "Recalculated total: $5000 tax + $400 penalty + $475 interest = $5875.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_003",
+      "source_item_id": "item_001",
+      "action_type": "REQUIRE_RERUN_PORT2",
+      "target": {
+        "artifact": "STRATEGY"
+      },
+      "reason": "Liability snapshot changed; strategy must be recalculated with updated total.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_004",
+      "source_item_id": "item_001",
+      "action_type": "REQUIRE_REBUILD_PORT3",
+      "target": {
+        "artifact": "PACKAGE"
+      },
+      "reason": "Upstream artifacts changed; CPA package must be rebuilt.",
+      "requires_human_approval": true
+    }
+  ],
+  "derived_impacts": [
+    "REQUIRE_REBUILD_PORT3",
+    "REQUIRE_RERUN_PORT2"
+  ],
+  "audit": {
+    "input_feedback_sha256": "",
+    "changeset_sha256": ""
+  }
+}

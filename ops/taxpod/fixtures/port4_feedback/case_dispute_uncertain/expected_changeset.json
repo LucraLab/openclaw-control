@@ -1,0 +1,43 @@
+{
+  "version": "ChangeSetV1",
+  "changeset_id": "case_demo_package_cs_20260222T160100Z",
+  "case_id": "case_demo_package",
+  "created_utc": "20260222T160100Z",
+  "source_feedback_id": "case_demo_package_fb_20260222T160000Z",
+  "package_manifest_sha256": "df4e7c8cbe06c4992cffa374fe7ae4d8ab9423c338432a9c4e086f52c5fe3a92",
+  "actions": [
+    {
+      "action_id": "act_001",
+      "source_item_id": "item_001",
+      "action_type": "ADD_FLAG",
+      "target": {
+        "artifact": "PACKAGE",
+        "year": 2020
+      },
+      "flag": {
+        "name": "NEEDS_VERIFICATION",
+        "scope": "filing_status",
+        "year": 2020
+      },
+      "reason": "Not sure if 2020 return was filed. IRS account transcript for 2020 is not in the package. Need to verify transcript before proceeding with strategy.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_002",
+      "source_item_id": "item_001",
+      "action_type": "REQUIRE_REEXPORT_BUNDLE",
+      "target": {
+        "artifact": "PACKAGE"
+      },
+      "reason": "Verification flag added; bundle must be re-exported to reflect updated case status.",
+      "requires_human_approval": true
+    }
+  ],
+  "derived_impacts": [
+    "REQUIRE_REEXPORT_BUNDLE"
+  ],
+  "audit": {
+    "input_feedback_sha256": "",
+    "changeset_sha256": ""
+  }
+}
