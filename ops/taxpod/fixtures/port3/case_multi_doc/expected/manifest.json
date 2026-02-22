@@ -1,0 +1,56 @@
+{
+  "version": "CpaPackageV1",
+  "case_id": "case_multi_doc",
+  "package_utc": "20260220T000000Z",
+  "source_bundle_path": "fixtures/port3/case_multi_doc/bundle",
+  "files": [
+    {
+      "path": "00_COVER_SHEET.md",
+      "sha256": "e9c79eebf2148d75b6a86b8dce77332224a514e3a981594e1b72808453436577"
+    },
+    {
+      "path": "01_LIABILITY_SNAPSHOT.json",
+      "sha256": "27f1d885d0f8093ac3b1953150198ae9f3753b1418d795a12d510520b64d0194"
+    },
+    {
+      "path": "02_PAYMENT_PLAN_MODEL.json",
+      "sha256": "27689400720fa7f81a4810066d0ee588221f8c0db0202f5a4a231ccf2e290205"
+    },
+    {
+      "path": "03_STRATEGY_RECOMMENDATION.json",
+      "sha256": "659363b4c2555e91124085e632f6b02ad7a27905caae4e25777fb5265ecd747e"
+    },
+    {
+      "path": "03_STRATEGY_RECOMMENDATION.md",
+      "sha256": "b47d2dde2b47e73f89e9173dee116a785253da5ade710fcfbf883eeae0298152"
+    },
+    {
+      "path": "04_TRANSCRIPTS/md_transcript_2021__REFERENCE.json",
+      "sha256": "37e828d2808d42f3bf6fc685d506e6a895e8006d563f154846db0f28e9b9c101"
+    },
+    {
+      "path": "04_TRANSCRIPTS/md_transcript_2022__REFERENCE.json",
+      "sha256": "c51eb1b5c1419b67758ce87a3644a0f071b2f1405cc9155fa64051cb5fc3d1cd"
+    },
+    {
+      "path": "04_TRANSCRIPTS/md_transcript_2023__REFERENCE.json",
+      "sha256": "b425a90e1fde638628b01fe68efee6afe1d923ceebdda0e447fe8ee280f69633"
+    },
+    {
+      "path": "05_NOTICES/md_notice_cp2000_2023__REFERENCE.json",
+      "sha256": "2abf1021b4f798767abf93d6df43d1c3fd9ab0b8641f8eb7b86fc14ffb86f638"
+    },
+    {
+      "path": "05_NOTICES/md_notice_cp501_2023__REFERENCE.json",
+      "sha256": "ed7956c1d458ae9dd26be733dd279807277398eb7a587aa0a0861aba2effce40"
+    },
+    {
+      "path": "06_DOCUMENT_CHECKLIST.md",
+      "sha256": "55407d6a0b45b0b7e10cfdc8a4e31d67bf2508b673e69d6990dfe65cc2c18768"
+    },
+    {
+      "path": "99_SUPPORTING_DOCS_INDEX.json",
+      "sha256": "c32f7ddb7e54521693f308f0303f21a72ceb5c4cfb73b2cf3ec308a981a2eab0"
+    }
+  ]
+}

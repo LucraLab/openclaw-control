@@ -1,0 +1,20 @@
+{
+  "case_id": "case_bad_strategy",
+  "tax_years": [
+    {
+      "year": 2022,
+      "tax_owed": 1000,
+      "penalty": 0,
+      "interest": 0,
+      "total_liability": 1000,
+      "filing_status": "single",
+      "agi": 30000,
+      "wages": 30000,
+      "withholding": 5000,
+      "flags": [],
+      "sources": ["FCT-BAD01"]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}

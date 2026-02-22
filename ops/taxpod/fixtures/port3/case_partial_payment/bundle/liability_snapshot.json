@@ -1,0 +1,46 @@
+{
+  "case_id": "case_partial_payment",
+  "tax_years": [
+    {
+      "year": 2019,
+      "tax_owed": 16000,
+      "penalty": 3200,
+      "interest": 1800,
+      "total_liability": 21000,
+      "filing_status": "single",
+      "agi": 45000,
+      "wages": 45000,
+      "withholding": 4500,
+      "flags": [],
+      "sources": ["FCT-PP01"]
+    },
+    {
+      "year": 2020,
+      "tax_owed": 12500,
+      "penalty": 2500,
+      "interest": 1500,
+      "total_liability": 16500,
+      "filing_status": "single",
+      "agi": 42000,
+      "wages": 42000,
+      "withholding": 4200,
+      "flags": [],
+      "sources": ["FCT-PP02"]
+    },
+    {
+      "year": 2021,
+      "tax_owed": 8000,
+      "penalty": 1800,
+      "interest": 1200,
+      "total_liability": 11000,
+      "filing_status": "single",
+      "agi": 40000,
+      "wages": 40000,
+      "withholding": 4000,
+      "flags": [],
+      "sources": ["FCT-PP03"]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}

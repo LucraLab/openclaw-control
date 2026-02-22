@@ -1,0 +1,25 @@
+{
+  "case_id": "case_partial_payment",
+  "transcripts": [
+    {
+      "id": "pp_transcript_2019",
+      "name": "2019_IRS_Account_Transcript.pdf",
+      "year_hint": "2019",
+      "path": "/2019/2019_IRS_Account_Transcript.pdf",
+      "sha256": "aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T05:00:00.000Z",
+      "doc_type": "transcript"
+    },
+    {
+      "id": "pp_transcript_2020",
+      "name": "2020_IRS_Account_Transcript.pdf",
+      "year_hint": "2020",
+      "path": "/2020/2020_IRS_Account_Transcript.pdf",
+      "sha256": "bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T05:30:00.000Z",
+      "doc_type": "transcript"
+    }
+  ]
+}

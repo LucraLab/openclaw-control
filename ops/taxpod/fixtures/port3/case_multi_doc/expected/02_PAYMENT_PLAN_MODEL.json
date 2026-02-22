@@ -1,0 +1,18 @@
+{
+  "version": "PaymentPlanModelV1",
+  "case_id": "case_multi_doc",
+  "as_of_utc": "20260220T000000Z",
+  "monthly_capacity": {
+    "net_income_monthly": 5200,
+    "essential_expenses_monthly": 3800,
+    "debt_payments_monthly": 900,
+    "estimated_disposable_monthly": 500,
+    "capacity_best": 550,
+    "capacity_likely": 500,
+    "capacity_worst": 450
+  },
+  "risk_flags": [],
+  "assumptions": [
+    "Based on taxpayer-reported income and expenses"
+  ]
+}

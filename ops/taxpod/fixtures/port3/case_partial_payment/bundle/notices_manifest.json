@@ -1,0 +1,25 @@
+{
+  "case_id": "case_partial_payment",
+  "notices": [
+    {
+      "id": "pp_notice_cp504_2019",
+      "name": "2019_IRS_Notice_CP504.pdf",
+      "year_hint": "2019",
+      "path": "/2019/2019_IRS_Notice_CP504.pdf",
+      "sha256": "cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T06:00:00.000Z",
+      "doc_type": "notice"
+    },
+    {
+      "id": "pp_notice_cp501_2020",
+      "name": "2020_IRS_Notice_CP501.pdf",
+      "year_hint": "2020",
+      "path": "/2020/2020_IRS_Notice_CP501.pdf",
+      "sha256": "dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T06:30:00.000Z",
+      "doc_type": "notice"
+    }
+  ]
+}

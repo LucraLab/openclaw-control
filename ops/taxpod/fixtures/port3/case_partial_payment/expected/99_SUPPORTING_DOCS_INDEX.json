@@ -1,0 +1,14 @@
+{
+  "case_id": "case_partial_payment",
+  "documents": [
+    {
+      "id": "pp_w2_2021",
+      "name": "2021_W-2_Employer.pdf",
+      "year_hint": "2021",
+      "path": "/2021/2021_W-2_Employer.pdf",
+      "sha256": "ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T04:00:00.000Z"
+    }
+  ]
+}

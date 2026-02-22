@@ -1,0 +1,22 @@
+{
+  "case_id": "case_multi_doc",
+  "tax_years": [
+    {
+      "year": 2023,
+      "tax_owed": 2000,
+      "penalty": 200,
+      "interest": 200,
+      "total_liability": 2400,
+      "filing_status": "married_filing_jointly",
+      "agi": 85000,
+      "wages": 85000,
+      "withholding": 12000,
+      "flags": [],
+      "sources": [
+        "FCT-MD01"
+      ]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}

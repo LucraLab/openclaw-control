@@ -1,0 +1,25 @@
+{
+  "case_id": "case_multi_doc",
+  "notices": [
+    {
+      "id": "md_notice_cp2000_2023",
+      "name": "2023_IRS_Notice_CP2000.pdf",
+      "year_hint": "2023",
+      "path": "/2023/2023_IRS_Notice_CP2000.pdf",
+      "sha256": "4444555566667777888899990000111122223333aaaabbbbccccddddeeee4444",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T07:00:00.000Z",
+      "doc_type": "notice"
+    },
+    {
+      "id": "md_notice_cp501_2023",
+      "name": "2023_IRS_Notice_CP501.pdf",
+      "year_hint": "2023",
+      "path": "/2023/2023_IRS_Notice_CP501.pdf",
+      "sha256": "5555666677778888999900001111222233334444aaaabbbbccccddddeeee5555",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T07:30:00.000Z",
+      "doc_type": "notice"
+    }
+  ]
+}

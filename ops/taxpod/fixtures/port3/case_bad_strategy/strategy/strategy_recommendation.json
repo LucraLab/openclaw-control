@@ -1,0 +1,13 @@
+{
+  "version": "StrategyRecommendationV1",
+  "case_id": "case_bad_strategy",
+  "as_of_utc": "20260220T000000Z",
+  "inputs": {
+    "bundle_path": "fixtures/port3/case_bad_strategy/bundle",
+    "model_path": "fixtures/port3/case_bad_strategy/model/payment_plan_model.json",
+    "total_liability": 1000,
+    "capacity_likely": 800
+  },
+  "risk_flags": [],
+  "assumptions": ["This is a test fixture"]
+}
