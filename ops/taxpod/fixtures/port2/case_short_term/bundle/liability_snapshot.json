@@ -1,0 +1,20 @@
+{
+  "case_id": "case_short_term",
+  "tax_years": [
+    {
+      "year": 2023,
+      "tax_owed": 2000,
+      "penalty": 300,
+      "interest": 200,
+      "total_liability": 2500,
+      "filing_status": "single",
+      "agi": 48000,
+      "wages": 48000,
+      "withholding": 7200,
+      "flags": [],
+      "sources": ["FCT-ST01"]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}

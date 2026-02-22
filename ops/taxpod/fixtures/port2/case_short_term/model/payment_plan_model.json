@@ -1,0 +1,18 @@
+{
+  "version": "PaymentPlanModelV1",
+  "case_id": "case_short_term",
+  "as_of_utc": "20260220T000000Z",
+  "monthly_capacity": {
+    "net_income_monthly": 4000,
+    "essential_expenses_monthly": 2800,
+    "debt_payments_monthly": 700,
+    "estimated_disposable_monthly": 500,
+    "capacity_best": 550,
+    "capacity_likely": 500,
+    "capacity_worst": 450
+  },
+  "risk_flags": [],
+  "assumptions": [
+    "Based on taxpayer-reported income and expenses"
+  ]
+}

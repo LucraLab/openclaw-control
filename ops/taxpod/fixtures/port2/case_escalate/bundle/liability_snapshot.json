@@ -1,0 +1,20 @@
+{
+  "case_id": "case_escalate",
+  "tax_years": [
+    {
+      "year": 2021,
+      "tax_owed": 8500,
+      "penalty": 1200,
+      "interest": 800,
+      "total_liability": 10500,
+      "filing_status": "married_filing_jointly",
+      "agi": 72000,
+      "wages": 55000,
+      "withholding": 6800,
+      "flags": ["incomplete_data"],
+      "sources": ["FCT-ES01"]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}

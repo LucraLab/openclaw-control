@@ -1,0 +1,18 @@
+{
+  "version": "PaymentPlanModelV1",
+  "case_id": "case_partial_pay",
+  "as_of_utc": "20260220T000000Z",
+  "monthly_capacity": {
+    "net_income_monthly": 2800,
+    "essential_expenses_monthly": 2400,
+    "debt_payments_monthly": 340,
+    "estimated_disposable_monthly": 60,
+    "capacity_best": 66,
+    "capacity_likely": 60,
+    "capacity_worst": 54
+  },
+  "risk_flags": ["LOW_DISPOSABLE"],
+  "assumptions": [
+    "Based on taxpayer-reported income and expenses"
+  ]
+}

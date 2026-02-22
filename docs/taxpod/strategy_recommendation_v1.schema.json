@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "strategy_recommendation_v1",
+  "title": "StrategyRecommendationV1",
+  "description": "Deterministic IRS payment strategy recommendation based on liability and capacity data.",
+  "type": "object",
+  "required": ["version", "case_id", "as_of_utc", "inputs", "strategy", "execution", "risk_flags", "assumptions"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "StrategyRecommendationV1"
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "as_of_utc": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z$"
+    },
+    "inputs": {
+      "type": "object",
+      "required": ["bundle_path", "model_path", "total_liability", "capacity_likely"],
+      "properties": {
+        "bundle_path": { "type": "string" },
+        "model_path": { "type": "string" },
+        "total_liability": { "type": "number" },
+        "capacity_likely": { "type": ["number", "null"] }
+      }
+    },
+    "strategy": {
+      "type": "object",
+      "required": ["type", "recommended_monthly_payment", "estimated_months_to_payoff", "why_this_strategy", "why_not_others"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["SHORT_TERM_PAYMENT_PLAN", "LONG_TERM_INSTALLMENT_AGREEMENT", "PARTIAL_PAYMENT_INSTALLMENT_AGREEMENT", "CPA_ESCALATION_REQUIRED"]
+        },
+        "recommended_monthly_payment": { "type": "number" },
+        "estimated_months_to_payoff": { "type": ["integer", "null"] },
+        "why_this_strategy": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "why_not_others": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": ["documents_needed", "call_script_questions"],
+      "properties": {
+        "documents_needed": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "call_script_questions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "risk_flags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
