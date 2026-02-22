@@ -1,0 +1,33 @@
+{
+  "case_id": "case_stressed",
+  "tax_years": [
+    {
+      "year": 2021,
+      "tax_owed": 18500,
+      "penalty": 2200,
+      "interest": 1100,
+      "total_liability": 21800,
+      "filing_status": "married_filing_jointly",
+      "agi": 95000,
+      "wages": 65000,
+      "withholding": 9100,
+      "flags": ["incomplete_data"],
+      "sources": ["FCT-S01"]
+    },
+    {
+      "year": 2022,
+      "tax_owed": 22000,
+      "penalty": 3500,
+      "interest": 1800,
+      "total_liability": 27300,
+      "filing_status": "married_filing_jointly",
+      "agi": 110000,
+      "wages": 72000,
+      "withholding": 10500,
+      "flags": [],
+      "sources": ["FCT-S02", "FCT-S03"]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}

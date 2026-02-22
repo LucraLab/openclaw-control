@@ -1,0 +1,15 @@
+{
+  "case_id": "case_demo_tn",
+  "transcripts": [
+    {
+      "id": "tn_transcript_2021",
+      "name": "2021_IRS_Account_Transcript.pdf",
+      "year_hint": "2021",
+      "path": "/2021/2021_IRS_Account_Transcript.pdf",
+      "sha256": "8fb9d0b1708446f597755267d5a332aae7e86278b7ede1a51f2d137dc6f21fc5",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T05:00:00.000Z",
+      "doc_type": "transcript"
+    }
+  ]
+}

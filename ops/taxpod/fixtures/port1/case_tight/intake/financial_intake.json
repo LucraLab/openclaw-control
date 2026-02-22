@@ -1,0 +1,76 @@
+{
+  "case_id": "case_tight",
+  "as_of_date": "2026-02-20",
+  "income": {
+    "sources": [
+      {
+        "type": "employment",
+        "description": "Full-time warehouse associate",
+        "monthly_amount": 4200
+      }
+    ]
+  },
+  "expenses": {
+    "housing": [
+      {
+        "type": "rent",
+        "description": "Apartment rent",
+        "monthly_amount": 1400
+      },
+      {
+        "type": "utilities",
+        "description": "Electric and water",
+        "monthly_amount": 180
+      }
+    ],
+    "transportation": [
+      {
+        "type": "gas",
+        "description": "Gas and maintenance",
+        "monthly_amount": 250
+      }
+    ],
+    "insurance_medical": [
+      {
+        "type": "health",
+        "description": "Health insurance premium",
+        "monthly_amount": 320
+      }
+    ],
+    "other_essential": [
+      {
+        "type": "food",
+        "description": "Groceries",
+        "monthly_amount": 500
+      },
+      {
+        "type": "phone",
+        "description": "Cell phone",
+        "monthly_amount": 85
+      }
+    ]
+  },
+  "debts": [
+    {
+      "type": "credit_card",
+      "description": "Visa credit card",
+      "monthly_payment": 150,
+      "balance": 4800
+    },
+    {
+      "type": "auto_loan",
+      "description": "Car payment",
+      "monthly_payment": 380,
+      "balance": 12500
+    }
+  ],
+  "dependents": 0,
+  "assets": {
+    "checking": 1200,
+    "savings": 350,
+    "retirement": 0,
+    "home_equity": 0,
+    "other_description": "",
+    "other_value": 0
+  }
+}

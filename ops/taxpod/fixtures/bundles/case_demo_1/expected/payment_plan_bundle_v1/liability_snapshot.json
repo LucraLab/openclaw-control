@@ -1,0 +1,39 @@
+{
+  "case_id": "case_demo_1",
+  "tax_years": [
+    {
+      "year": 2021,
+      "tax_owed": 0,
+      "penalty": 0,
+      "interest": 0,
+      "total_liability": 0,
+      "filing_status": "unknown",
+      "agi": 0,
+      "wages": 52000,
+      "withholding": 8500,
+      "flags": [],
+      "sources": [
+        "FCT-FIX-001",
+        "FCT-FIX-002",
+        "FCT-FIX-003"
+      ]
+    },
+    {
+      "year": 2022,
+      "tax_owed": 0,
+      "penalty": 0,
+      "interest": 0,
+      "total_liability": 0,
+      "filing_status": "unknown",
+      "agi": 0,
+      "wages": 75000,
+      "withholding": 0,
+      "flags": [],
+      "sources": [
+        "FCT-FIX-004"
+      ]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}

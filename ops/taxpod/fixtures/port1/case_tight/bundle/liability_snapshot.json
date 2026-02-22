@@ -1,0 +1,33 @@
+{
+  "case_id": "case_tight",
+  "tax_years": [
+    {
+      "year": 2021,
+      "tax_owed": 4200,
+      "penalty": 350,
+      "interest": 180,
+      "total_liability": 4730,
+      "filing_status": "single",
+      "agi": 56500,
+      "wages": 52000,
+      "withholding": 8500,
+      "flags": [],
+      "sources": ["FCT-001", "FCT-002"]
+    },
+    {
+      "year": 2022,
+      "tax_owed": 2800,
+      "penalty": 200,
+      "interest": 90,
+      "total_liability": 3090,
+      "filing_status": "single",
+      "agi": 75000,
+      "wages": 75000,
+      "withholding": 12000,
+      "flags": [],
+      "sources": ["FCT-003"]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}

@@ -1,0 +1,32 @@
+{
+  "case_id": "case_demo_1",
+  "documents": [
+    {
+      "id": "fix_1099_2021",
+      "name": "2021_1099-NEC_Contract.pdf",
+      "year_hint": "2021",
+      "path": "/2021/2021_1099-NEC_Contract.pdf",
+      "sha256": "134686d9aab77b9f6fdc91b98e8adad22f3fd86f9eb02087d8a282a59a847ceb",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T04:00:00.000Z"
+    },
+    {
+      "id": "fix_w2_2021",
+      "name": "2021_W-2_Employer.pdf",
+      "year_hint": "2021",
+      "path": "/2021/2021_W-2_Employer.pdf",
+      "sha256": "628d66643707ddaee75447a0b7025a6d3b0be2b1a7d8b2908c64475fca38ed88",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T03:51:09.193Z"
+    },
+    {
+      "id": "fix_w2_2022",
+      "name": "2022_W-2_Employer.pdf",
+      "year_hint": "2022",
+      "path": "/2022/2022_W-2_Employer.pdf",
+      "sha256": "5a98f2ecf033bf70baf328869834215b97259c452c3051bd77510fb9bbe2c939",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T07:00:00.000Z"
+    }
+  ]
+}

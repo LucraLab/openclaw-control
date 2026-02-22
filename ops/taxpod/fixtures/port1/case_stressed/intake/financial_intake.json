@@ -1,0 +1,102 @@
+{
+  "case_id": "case_stressed",
+  "as_of_date": "2026-02-20",
+  "income": {
+    "sources": [
+      {
+        "type": "employment",
+        "description": "Part-time retail",
+        "monthly_amount": 1800
+      },
+      {
+        "type": "self_employment",
+        "description": "Freelance graphic design",
+        "monthly_amount": 1200
+      }
+    ]
+  },
+  "expenses": {
+    "housing": [
+      {
+        "type": "mortgage",
+        "description": "Mortgage payment",
+        "monthly_amount": 1650
+      },
+      {
+        "type": "utilities",
+        "description": "Electric, gas, water, internet",
+        "monthly_amount": 280
+      }
+    ],
+    "transportation": [
+      {
+        "type": "gas",
+        "description": "Gas and tolls",
+        "monthly_amount": 200
+      },
+      {
+        "type": "insurance",
+        "description": "Auto insurance",
+        "monthly_amount": 140
+      }
+    ],
+    "insurance_medical": [
+      {
+        "type": "health",
+        "description": "Health insurance premium",
+        "monthly_amount": 480
+      },
+      {
+        "type": "prescriptions",
+        "description": "Monthly prescriptions",
+        "monthly_amount": 75
+      }
+    ],
+    "other_essential": [
+      {
+        "type": "food",
+        "description": "Groceries and household",
+        "monthly_amount": 650
+      },
+      {
+        "type": "childcare",
+        "description": "Daycare for youngest child",
+        "monthly_amount": 800
+      },
+      {
+        "type": "phone",
+        "description": "Family cell phone plan",
+        "monthly_amount": 120
+      }
+    ]
+  },
+  "debts": [
+    {
+      "type": "credit_card",
+      "description": "Mastercard",
+      "monthly_payment": 200,
+      "balance": 8500
+    },
+    {
+      "type": "student_loan",
+      "description": "Federal student loan",
+      "monthly_payment": 280,
+      "balance": 32000
+    },
+    {
+      "type": "auto_loan",
+      "description": "Car loan - Honda Civic",
+      "monthly_payment": 350,
+      "balance": 14200
+    }
+  ],
+  "dependents": 2,
+  "assets": {
+    "checking": 450,
+    "savings": 200,
+    "retirement": 12000,
+    "home_equity": 35000,
+    "other_description": "",
+    "other_value": 0
+  }
+}

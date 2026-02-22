@@ -1,0 +1,15 @@
+{
+  "case_id": "case_demo_tn",
+  "notices": [
+    {
+      "id": "tn_notice_cp2000_2021",
+      "name": "2021_IRS_Notice_CP2000.pdf",
+      "year_hint": "2021",
+      "path": "/2021/2021_IRS_Notice_CP2000.pdf",
+      "sha256": "4e8753bfc02d89227e6700dbbb30e76337b1d5e6f341268a3a9fa132eb8a28a5",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T06:00:00.000Z",
+      "doc_type": "notice"
+    }
+  ]
+}
