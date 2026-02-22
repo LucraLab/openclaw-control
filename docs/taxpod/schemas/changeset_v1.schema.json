@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://taxpod.openclaw.io/schemas/changeset_v1.schema.json",
+  "title": "ChangeSetV1",
+  "description": "Structured change request produced by PORT4. Proposes changes to upstream TaxPod artifacts based on CPA feedback.",
+  "type": "object",
+  "required": [
+    "version",
+    "changeset_id",
+    "case_id",
+    "created_utc",
+    "source_feedback_id",
+    "package_manifest_sha256",
+    "actions",
+    "derived_impacts",
+    "audit"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "ChangeSetV1"
+    },
+    "changeset_id": {
+      "type": "string",
+      "pattern": "^.+_cs_[0-9]{8}T[0-9]{6}Z$",
+      "description": "Deterministic ID: <case_id>_cs_<created_utc>"
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_utc": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z$",
+      "description": "ISO-like UTC timestamp, injected via --created-utc CLI arg"
+    },
+    "source_feedback_id": {
+      "type": "string",
+      "pattern": "^.+_fb_[0-9]{8}T[0-9]{6}Z$",
+      "description": "Links back to the FeedbackV1 that produced this changeset"
+    },
+    "package_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Must match the feedback's package_manifest_sha256"
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Action"
+      },
+      "description": "Ordered list of proposed actions. Sorted by action_id."
+    },
+    "derived_impacts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "REQUIRE_REBUILD_PORT3",
+          "REQUIRE_REEXPORT_BUNDLE",
+          "REQUIRE_RERUN_PORT1",
+          "REQUIRE_RERUN_PORT2"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Sorted alphabetically. Computed from cascade rules."
+    },
+    "audit": {
+      "$ref": "#/$defs/Audit"
+    }
+  },
+  "$defs": {
+    "Action": {
+      "type": "object",
+      "required": [
+        "action_id",
+        "source_item_id",
+        "action_type",
+        "target",
+        "reason",
+        "requires_human_approval"
+      ],
+      "additionalProperties": true,
+      "description": "A single proposed change. Additional fields (patch, flag, doc) depend on action_type.",
+      "properties": {
+        "action_id": {
+          "type": "string",
+          "pattern": "^act_[0-9]{3}$",
+          "description": "Unique within changeset. Sequential: act_001, act_002, ..."
+        },
+        "source_item_id": {
+          "type": "string",
+          "pattern": "^item_[0-9]{3}$",
+          "description": "Links back to the feedback item that triggered this action"
+        },
+        "action_type": {
+          "type": "string",
+          "enum": [
+            "PATCH_JSON",
+            "ADD_FLAG",
+            "REMOVE_FLAG",
+            "ADD_DOC_REFERENCE",
+            "RECLASSIFY_DOC",
+            "REQUIRE_REEXPORT_BUNDLE",
+            "REQUIRE_RERUN_PORT1",
+            "REQUIRE_RERUN_PORT2",
+            "REQUIRE_REBUILD_PORT3"
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/ActionTarget"
+        },
+        "patch": {
+          "$ref": "#/$defs/Patch",
+          "description": "Required for PATCH_JSON actions"
+        },
+        "flag": {
+          "$ref": "#/$defs/Flag",
+          "description": "Required for ADD_FLAG and REMOVE_FLAG actions"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable explanation of why this action is proposed"
+        },
+        "requires_human_approval": {
+          "type": "boolean",
+          "description": "Must be true in V1"
+        }
+      }
+    },
+    "ActionTarget": {
+      "type": "object",
+      "required": ["artifact"],
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "enum": [
+            "LIABILITY_SNAPSHOT",
+            "PAYMENT_MODEL",
+            "STRATEGY",
+            "PACKAGE"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "description": "RFC6902-style JSON pointer for PATCH_JSON, e.g., /tax_years/0/interest"
+        },
+        "year": {
+          "type": "integer",
+          "minimum": 2000,
+          "maximum": 2099
+        },
+        "doc_id": {
+          "type": "string",
+          "description": "Document identifier for doc-specific actions"
+        }
+      }
+    },
+    "Patch": {
+      "type": "object",
+      "required": ["op", "path", "value", "old_value"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["replace", "add", "remove"]
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "RFC6902-style JSON pointer, e.g., /tax_years/0/interest"
+        },
+        "value": {
+          "description": "The new value to set"
+        },
+        "old_value": {
+          "description": "Expected current value for drift detection. If mismatch at apply time, reject."
+        }
+      }
+    },
+    "Flag": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "NEEDS_VERIFICATION",
+            "DISPUTED_AMOUNT",
+            "MISSING_FILING",
+            "POSSIBLE_ERROR"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "description": "What the flag applies to, e.g., filing_status"
+        },
+        "year": {
+          "type": "integer",
+          "minimum": 2000,
+          "maximum": 2099,
+          "description": "Tax year the flag applies to"
+        }
+      }
+    },
+    "Audit": {
+      "type": "object",
+      "required": ["input_feedback_sha256", "changeset_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "input_feedback_sha256": {
+          "type": "string",
+          "description": "SHA-256 hex digest of the FeedbackV1 input. Empty string in fixtures (computed at runtime)."
+        },
+        "changeset_sha256": {
+          "type": "string",
+          "description": "SHA-256 hex digest of this changeset (computed with this field set to empty string). Empty string in fixtures."
+        }
+      }
+    }
+  }
+}

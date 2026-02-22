@@ -1,0 +1,62 @@
+{
+  "version": "ChangeSetV1",
+  "changeset_id": "case_demo_package_cs_20260222T150100Z",
+  "case_id": "case_demo_package",
+  "created_utc": "20260222T150100Z",
+  "source_feedback_id": "case_demo_package_fb_20260222T150000Z",
+  "package_manifest_sha256": "df4e7c8cbe06c4992cffa374fe7ae4d8ab9423c338432a9c4e086f52c5fe3a92",
+  "actions": [
+    {
+      "action_id": "act_001",
+      "source_item_id": "item_001",
+      "action_type": "ADD_DOC_REFERENCE",
+      "target": {
+        "artifact": "PACKAGE",
+        "year": 2021,
+        "doc_id": "2021_IRS_Account_Transcript.pdf"
+      },
+      "reason": "Package only contains 2022 transcript. Need 2021 account transcript to verify prior year filing status and confirm no outstanding balance.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_002",
+      "source_item_id": "item_002",
+      "action_type": "ADD_DOC_REFERENCE",
+      "target": {
+        "artifact": "PACKAGE",
+        "year": 2022,
+        "doc_id": "2022_IRS_Notice_CP2000_Response.pdf"
+      },
+      "reason": "Need the CP2000 response letter if one was sent. This confirms whether the taxpayer agreed or disputed the proposed assessment.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_003",
+      "source_item_id": "item_001",
+      "action_type": "REQUIRE_REEXPORT_BUNDLE",
+      "target": {
+        "artifact": "PACKAGE"
+      },
+      "reason": "New documents must be added to the bundle before package rebuild.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_004",
+      "source_item_id": "item_001",
+      "action_type": "REQUIRE_REBUILD_PORT3",
+      "target": {
+        "artifact": "PACKAGE"
+      },
+      "reason": "Bundle contents changed; CPA package must be rebuilt to include new document references.",
+      "requires_human_approval": true
+    }
+  ],
+  "derived_impacts": [
+    "REQUIRE_REBUILD_PORT3",
+    "REQUIRE_REEXPORT_BUNDLE"
+  ],
+  "audit": {
+    "input_feedback_sha256": "",
+    "changeset_sha256": ""
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "version": "FeedbackV1",
+  "feedback_id": "case_demo_package_fb_20260222T140000Z",
+  "case_id": "case_demo_package",
+  "source": "CPA",
+  "received_utc": "20260222T140000Z",
+  "package_manifest_sha256": "df4e7c8cbe06c4992cffa374fe7ae4d8ab9423c338432a9c4e086f52c5fe3a92",
+  "items": [
+    {
+      "item_id": "item_001",
+      "type": "LIABILITY_CORRECTION",
+      "target": {
+        "artifact": "LIABILITY_SNAPSHOT",
+        "path": "tax_years[year=2022].interest",
+        "year": 2022
+      },
+      "proposed_change": {
+        "field": "interest",
+        "old_value": 250,
+        "new_value": 475
+      },
+      "evidence": {
+        "notes": "CP2000 assessed interest line item missing. IRS transcript shows $475 interest accrued for TY2022, not $250 as originally reported.",
+        "attachments": ["2022_IRS_Account_Transcript_updated.pdf"],
+        "confidence": "HIGH"
+      },
+      "requires_human_approval": true
+    },
+    {
+      "item_id": "item_002",
+      "type": "LIABILITY_CORRECTION",
+      "target": {
+        "artifact": "LIABILITY_SNAPSHOT",
+        "path": "tax_years[year=2022].total_liability",
+        "year": 2022
+      },
+      "proposed_change": {
+        "field": "total_liability",
+        "old_value": 5650,
+        "new_value": 5875
+      },
+      "evidence": {
+        "notes": "Recalculated total: $5000 tax + $400 penalty + $475 interest = $5875.",
+        "attachments": [],
+        "confidence": "HIGH"
+      },
+      "requires_human_approval": true
+    }
+  ]
+}
