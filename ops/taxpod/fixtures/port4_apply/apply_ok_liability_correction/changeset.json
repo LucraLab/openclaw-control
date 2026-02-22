@@ -1,0 +1,74 @@
+{
+  "version": "ChangeSetV1",
+  "changeset_id": "fixture_case_cs_20260222T100000Z",
+  "case_id": "fixture_case",
+  "created_utc": "20260222T100000Z",
+  "source_feedback_id": "fixture_case_fb_20260222T090000Z",
+  "package_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "actions": [
+    {
+      "action_id": "act_001",
+      "source_item_id": "item_001",
+      "action_type": "PATCH_JSON",
+      "target": {
+        "artifact": "LIABILITY_SNAPSHOT",
+        "path": "/liability_summary/tax_years/0/interest",
+        "year": 2022
+      },
+      "patch": {
+        "op": "replace",
+        "path": "/liability_summary/tax_years/0/interest",
+        "value": 475,
+        "old_value": 250
+      },
+      "reason": "IRS transcript shows $475 interest for TY2022.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_002",
+      "source_item_id": "item_001",
+      "action_type": "PATCH_JSON",
+      "target": {
+        "artifact": "LIABILITY_SNAPSHOT",
+        "path": "/liability_summary/tax_years/0/total_liability",
+        "year": 2022
+      },
+      "patch": {
+        "op": "replace",
+        "path": "/liability_summary/tax_years/0/total_liability",
+        "value": 5875,
+        "old_value": 5650
+      },
+      "reason": "Recalculated: $5000 + $400 + $475 = $5875.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_003",
+      "source_item_id": "item_001",
+      "action_type": "REQUIRE_RERUN_PORT2",
+      "target": {
+        "artifact": "STRATEGY"
+      },
+      "reason": "Liability changed; strategy must recalculate.",
+      "requires_human_approval": true
+    },
+    {
+      "action_id": "act_004",
+      "source_item_id": "item_001",
+      "action_type": "REQUIRE_REBUILD_PORT3",
+      "target": {
+        "artifact": "PACKAGE"
+      },
+      "reason": "Upstream changed; rebuild CPA package.",
+      "requires_human_approval": true
+    }
+  ],
+  "derived_impacts": [
+    "REQUIRE_REBUILD_PORT3",
+    "REQUIRE_RERUN_PORT2"
+  ],
+  "audit": {
+    "input_feedback_sha256": "",
+    "changeset_sha256": ""
+  }
+}

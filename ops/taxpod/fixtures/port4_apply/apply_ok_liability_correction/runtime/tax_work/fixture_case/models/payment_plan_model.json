@@ -1,0 +1,61 @@
+{
+  "version": "PaymentPlanModelV1",
+  "case_id": "fixture_case",
+  "as_of_utc": "20260222T000000Z",
+  "liability_summary": {
+    "tax_years": [
+      {
+        "year": 2022,
+        "tax_owed": 5000,
+        "penalty": 400,
+        "interest": 250,
+        "total_liability": 5650,
+        "filing_status": "single",
+        "agi": 55000,
+        "wages": 55000,
+        "withholding": 8000,
+        "flags": [],
+        "sources": [
+          "FCT-fixture"
+        ]
+      }
+    ],
+    "total_tax_owed": 5000,
+    "total_penalty": 400,
+    "total_interest": 250,
+    "total_liability": 5650
+  },
+  "intake_summary": {
+    "total_monthly_income": 4500,
+    "total_monthly_expenses": 3200,
+    "total_monthly_debt_payments": 300,
+    "dependents": 0,
+    "total_assets": 15000,
+    "income_source_count": 1,
+    "has_self_employment": false
+  },
+  "monthly_capacity": {
+    "net_income_monthly": 4500,
+    "essential_expenses_monthly": 3200,
+    "debt_payments_monthly": 300,
+    "estimated_disposable_monthly": 1000,
+    "capacity_best": 1100,
+    "capacity_likely": 1000,
+    "capacity_worst": 900
+  },
+  "risk_flags": [],
+  "assumptions": [
+    "Fixture data for testing"
+  ],
+  "derived": {
+    "expense_breakdown": {
+      "housing": 1500,
+      "insurance_medical": 400,
+      "other_essential": 1000,
+      "transportation": 300
+    },
+    "income_breakdown": {
+      "employment": 4500
+    }
+  }
+}
