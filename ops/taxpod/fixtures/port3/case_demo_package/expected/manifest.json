@@ -1,0 +1,44 @@
+{
+  "version": "CpaPackageV1",
+  "case_id": "case_demo_package",
+  "package_utc": "20260220T000000Z",
+  "source_bundle_path": "fixtures/port3/case_demo_package/bundle",
+  "files": [
+    {
+      "path": "00_COVER_SHEET.md",
+      "sha256": "905494da14270e0d39ec8cb50fbd5992560029f3127a1fe785ac415c7e168e96"
+    },
+    {
+      "path": "01_LIABILITY_SNAPSHOT.json",
+      "sha256": "dde182d194376e38222b4ba6b9f41010041966c53f7f312921df2a8198d4d055"
+    },
+    {
+      "path": "02_PAYMENT_PLAN_MODEL.json",
+      "sha256": "25b9ea9399cbc1e2a881c8037f391957e55d950b5f1de2be0c3aa1d2d4e8ee46"
+    },
+    {
+      "path": "03_STRATEGY_RECOMMENDATION.json",
+      "sha256": "611ca78347ef15ca00d8b7abfe1a4bfed2326a595c26d0d77362035fe27a2432"
+    },
+    {
+      "path": "03_STRATEGY_RECOMMENDATION.md",
+      "sha256": "dd2b96dd7790e09b71c193041f8f68efedc265a8578467686635e6e5e8bf8d55"
+    },
+    {
+      "path": "04_TRANSCRIPTS/pkg_transcript_2022__REFERENCE.json",
+      "sha256": "03ab187c50fff8624a9a80aac713e0407df15d80534a40e5b83ccf0cd671debf"
+    },
+    {
+      "path": "05_NOTICES/pkg_notice_cp2000_2022__REFERENCE.json",
+      "sha256": "7b79a5773586c625719f05d645a8d0458c7a46ef2b310e6424fe65ff4c9ac769"
+    },
+    {
+      "path": "06_DOCUMENT_CHECKLIST.md",
+      "sha256": "58eb9811b611ba2229d35e66fa55f280234c8cc011a1e8d74a62ca8ddcd78c04"
+    },
+    {
+      "path": "99_SUPPORTING_DOCS_INDEX.json",
+      "sha256": "4d3ca908f1b6a005d9b73d7951d0333ec8139fb25bf1aecc09b27316243a61fb"
+    }
+  ]
+}

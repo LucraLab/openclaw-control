@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CpaPackageManifestV1",
+  "description": "Manifest for a deterministic CPA handoff package",
+  "type": "object",
+  "required": ["version", "case_id", "package_utc", "source_bundle_path", "files"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "CpaPackageV1"
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package_utc": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z$"
+    },
+    "source_bundle_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

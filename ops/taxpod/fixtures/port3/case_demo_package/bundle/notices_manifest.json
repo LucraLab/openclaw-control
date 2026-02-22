@@ -1,0 +1,15 @@
+{
+  "case_id": "case_demo_package",
+  "notices": [
+    {
+      "id": "pkg_notice_cp2000_2022",
+      "name": "2022_IRS_Notice_CP2000.pdf",
+      "year_hint": "2022",
+      "path": "/2022/2022_IRS_Notice_CP2000.pdf",
+      "sha256": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T06:00:00.000Z",
+      "doc_type": "notice"
+    }
+  ]
+}
