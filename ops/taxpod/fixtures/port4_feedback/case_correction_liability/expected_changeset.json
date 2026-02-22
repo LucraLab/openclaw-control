@@ -12,12 +12,12 @@
       "action_type": "PATCH_JSON",
       "target": {
         "artifact": "LIABILITY_SNAPSHOT",
-        "path": "/tax_years/0/interest",
+        "path": "/liability_summary/tax_years/0/interest",
         "year": 2022
       },
       "patch": {
         "op": "replace",
-        "path": "/tax_years/0/interest",
+        "path": "/liability_summary/tax_years/0/interest",
         "value": 475,
         "old_value": 250
       },
@@ -30,12 +30,12 @@
       "action_type": "PATCH_JSON",
       "target": {
         "artifact": "LIABILITY_SNAPSHOT",
-        "path": "/tax_years/0/total_liability",
+        "path": "/liability_summary/tax_years/0/total_liability",
         "year": 2022
       },
       "patch": {
         "op": "replace",
-        "path": "/tax_years/0/total_liability",
+        "path": "/liability_summary/tax_years/0/total_liability",
         "value": 5875,
         "old_value": 5650
       },
@@ -69,6 +69,6 @@
   ],
   "audit": {
     "input_feedback_sha256": "22472e6eabf46abf6e7784498ab66983cd5bd7cd3ef711d0240d62cf7a020446",
-    "changeset_sha256": "ac1b0690fef025e53224dcb498e419d126fe127036352d6dc0ff567841cb0281"
+    "changeset_sha256": "d503f959daa4ae7e2cba79311134959d612109f9aaca678ba5836f5bcfe5b478"
   }
 }
