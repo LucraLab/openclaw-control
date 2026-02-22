@@ -1,0 +1,18 @@
+{
+  "version": "PaymentPlanModelV1",
+  "case_id": "case_escalate",
+  "as_of_utc": "20260220T000000Z",
+  "monthly_capacity": {
+    "net_income_monthly": 4500,
+    "essential_expenses_monthly": 3200,
+    "debt_payments_monthly": 580,
+    "estimated_disposable_monthly": 720,
+    "capacity_best": 792,
+    "capacity_likely": 720,
+    "capacity_worst": 648
+  },
+  "risk_flags": ["SELF_EMPLOYMENT_COMPLEXITY", "INCOMPLETE_TAX_DATA"],
+  "assumptions": [
+    "Based on taxpayer-reported income and expenses"
+  ]
+}

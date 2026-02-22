@@ -1,0 +1,33 @@
+{
+  "case_id": "case_long_term",
+  "tax_years": [
+    {
+      "year": 2021,
+      "tax_owed": 12000,
+      "penalty": 1800,
+      "interest": 900,
+      "total_liability": 14700,
+      "filing_status": "married_filing_jointly",
+      "agi": 82000,
+      "wages": 75000,
+      "withholding": 9500,
+      "flags": [],
+      "sources": ["FCT-LT01"]
+    },
+    {
+      "year": 2022,
+      "tax_owed": 10500,
+      "penalty": 2300,
+      "interest": 1500,
+      "total_liability": 14300,
+      "filing_status": "married_filing_jointly",
+      "agi": 88000,
+      "wages": 80000,
+      "withholding": 10200,
+      "flags": [],
+      "sources": ["FCT-LT02"]
+    }
+  ],
+  "generated_utc": "20260220T000000Z",
+  "vault_version": "13.2.0"
+}
