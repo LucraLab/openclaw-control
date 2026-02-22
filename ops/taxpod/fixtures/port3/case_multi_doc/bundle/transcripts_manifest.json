@@ -1,0 +1,35 @@
+{
+  "case_id": "case_multi_doc",
+  "transcripts": [
+    {
+      "id": "md_transcript_2021",
+      "name": "2021_IRS_Account_Transcript.pdf",
+      "year_hint": "2021",
+      "path": "/2021/2021_IRS_Account_Transcript.pdf",
+      "sha256": "1111222233334444555566667777888899990000aaaabbbbccccddddeeee1111",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T05:00:00.000Z",
+      "doc_type": "transcript"
+    },
+    {
+      "id": "md_transcript_2022",
+      "name": "2022_IRS_Account_Transcript.pdf",
+      "year_hint": "2022",
+      "path": "/2022/2022_IRS_Account_Transcript.pdf",
+      "sha256": "2222333344445555666677778888999900001111aaaabbbbccccddddeeee2222",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T05:30:00.000Z",
+      "doc_type": "transcript"
+    },
+    {
+      "id": "md_transcript_2023",
+      "name": "2023_IRS_Account_Transcript.pdf",
+      "year_hint": "2023",
+      "path": "/2023/2023_IRS_Account_Transcript.pdf",
+      "sha256": "3333444455556666777788889999000011112222aaaabbbbccccddddeeee3333",
+      "size_bytes": 0,
+      "modified_utc": "2026-02-17T06:00:00.000Z",
+      "doc_type": "transcript"
+    }
+  ]
+}

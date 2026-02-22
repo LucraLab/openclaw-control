@@ -1,0 +1,53 @@
+{
+  "version": "StrategyRecommendationV1",
+  "case_id": "case_partial_payment",
+  "as_of_utc": "20260220T000000Z",
+  "inputs": {
+    "bundle_path": "fixtures/port3/case_partial_payment/bundle",
+    "model_path": "fixtures/port3/case_partial_payment/model/payment_plan_model.json",
+    "total_liability": 48500,
+    "capacity_likely": 60
+  },
+  "strategy": {
+    "type": "PARTIAL_PAYMENT_INSTALLMENT_AGREEMENT",
+    "recommended_monthly_payment": 60,
+    "estimated_months_to_payoff": 809,
+    "why_this_strategy": [
+      "Total liability of $48500.00 would take 809 months at $60.00/month",
+      "Payoff exceeds 72-month maximum for standard installment agreements",
+      "Partial payment installment agreement allows reduced monthly payments",
+      "CPA/EA negotiation required to finalize terms with the IRS"
+    ],
+    "why_not_others": [
+      "Short-term plan not feasible (payoff requires 809 months, exceeds 6-month limit)",
+      "Standard installment agreement not feasible (payoff requires 809 months, exceeds 72-month limit)"
+    ]
+  },
+  "execution": {
+    "documents_needed": [
+      "Income verification documents",
+      "Housing and utility documentation",
+      "Debt statements",
+      "Asset documentation",
+      "Prior IRS correspondence",
+      "Form 433-A (Collection Information Statement)"
+    ],
+    "call_script_questions": [
+      "Confirm total balance due across all tax years",
+      "Request current penalty and interest calculations",
+      "Discuss partial payment installment agreement eligibility",
+      "Request Form 433-A requirements",
+      "Confirm no active liens or levies"
+    ]
+  },
+  "risk_flags": [
+    "LOW_DISPOSABLE"
+  ],
+  "assumptions": [
+    "This is a planning estimate based on reported data",
+    "Confirm all figures and strategy with a licensed CPA or Enrolled Agent before contacting the IRS",
+    "Liability totals from TaxVault bundle export; may not reflect recent payments or adjustments",
+    "Monthly capacity from taxpayer-reported income and expenses",
+    "Strategy thresholds: short-term <= 6 months, long-term <= 72 months, minimum payment $50"
+  ]
+}
