@@ -1,0 +1,87 @@
+{
+  "version": "PaymentPlanModelV1",
+  "case_id": "case_stressed",
+  "as_of_utc": "20260220T000000Z",
+  "liability_summary": {
+    "tax_years": [
+      {
+        "year": 2021,
+        "tax_owed": 18500,
+        "penalty": 2200,
+        "interest": 1100,
+        "total_liability": 21800,
+        "filing_status": "married_filing_jointly",
+        "agi": 95000,
+        "wages": 65000,
+        "withholding": 9100,
+        "flags": [
+          "incomplete_data"
+        ],
+        "sources": [
+          "FCT-S01"
+        ]
+      },
+      {
+        "year": 2022,
+        "tax_owed": 22000,
+        "penalty": 3500,
+        "interest": 1800,
+        "total_liability": 27300,
+        "filing_status": "married_filing_jointly",
+        "agi": 110000,
+        "wages": 72000,
+        "withholding": 10500,
+        "flags": [],
+        "sources": [
+          "FCT-S02",
+          "FCT-S03"
+        ]
+      }
+    ],
+    "total_tax_owed": 40500,
+    "total_penalty": 5700,
+    "total_interest": 2900,
+    "total_liability": 49100
+  },
+  "intake_summary": {
+    "total_monthly_income": 3000,
+    "total_monthly_expenses": 4395,
+    "total_monthly_debt_payments": 830,
+    "dependents": 2,
+    "total_assets": 47650,
+    "income_source_count": 2,
+    "has_self_employment": true
+  },
+  "monthly_capacity": {
+    "net_income_monthly": 3000,
+    "essential_expenses_monthly": 4395,
+    "debt_payments_monthly": 830,
+    "estimated_disposable_monthly": -2225,
+    "capacity_best": -2447.5,
+    "capacity_likely": -2225,
+    "capacity_worst": -2002.5
+  },
+  "risk_flags": [
+    "NEGATIVE_CASHFLOW",
+    "SELF_EMPLOYMENT_COMPLEXITY",
+    "INCOMPLETE_TAX_DATA"
+  ],
+  "assumptions": [
+    "Income and expenses as reported by taxpayer on intake form",
+    "Sensitivity range: best +10%, worst -10% of disposable",
+    "No adjustment for seasonality or future income changes",
+    "Liability totals from TaxVault as of bundle export date"
+  ],
+  "derived": {
+    "expense_breakdown": {
+      "housing": 1930,
+      "insurance_medical": 555,
+      "other_essential": 1570,
+      "transportation": 340
+    },
+    "income_breakdown": {
+      "employment": 1800,
+      "self_employment": 1200
+    }
+  }
+}

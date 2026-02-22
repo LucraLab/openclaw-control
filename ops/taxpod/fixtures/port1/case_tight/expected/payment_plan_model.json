@@ -1,0 +1,80 @@
+{
+  "version": "PaymentPlanModelV1",
+  "case_id": "case_tight",
+  "as_of_utc": "20260220T000000Z",
+  "liability_summary": {
+    "tax_years": [
+      {
+        "year": 2021,
+        "tax_owed": 4200,
+        "penalty": 350,
+        "interest": 180,
+        "total_liability": 4730,
+        "filing_status": "single",
+        "agi": 56500,
+        "wages": 52000,
+        "withholding": 8500,
+        "flags": [],
+        "sources": [
+          "FCT-001",
+          "FCT-002"
+        ]
+      },
+      {
+        "year": 2022,
+        "tax_owed": 2800,
+        "penalty": 200,
+        "interest": 90,
+        "total_liability": 3090,
+        "filing_status": "single",
+        "agi": 75000,
+        "wages": 75000,
+        "withholding": 12000,
+        "flags": [],
+        "sources": [
+          "FCT-003"
+        ]
+      }
+    ],
+    "total_tax_owed": 7000,
+    "total_penalty": 550,
+    "total_interest": 270,
+    "total_liability": 7820
+  },
+  "intake_summary": {
+    "total_monthly_income": 4200,
+    "total_monthly_expenses": 2735,
+    "total_monthly_debt_payments": 530,
+    "dependents": 0,
+    "total_assets": 1550,
+    "income_source_count": 1,
+    "has_self_employment": false
+  },
+  "monthly_capacity": {
+    "net_income_monthly": 4200,
+    "essential_expenses_monthly": 2735,
+    "debt_payments_monthly": 530,
+    "estimated_disposable_monthly": 935,
+    "capacity_best": 1028.5,
+    "capacity_likely": 935,
+    "capacity_worst": 841.5
+  },
+  "risk_flags": [],
+  "assumptions": [
+    "Income and expenses as reported by taxpayer on intake form",
+    "Sensitivity range: best +10%, worst -10% of disposable",
+    "No adjustment for seasonality or future income changes",
+    "Liability totals from TaxVault as of bundle export date"
+  ],
+  "derived": {
+    "expense_breakdown": {
+      "housing": 1580,
+      "insurance_medical": 320,
+      "other_essential": 585,
+      "transportation": 250
+    },
+    "income_breakdown": {
+      "employment": 4200
+    }
+  }
+}
