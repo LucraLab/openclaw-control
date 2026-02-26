@@ -1,0 +1,112 @@
+name: Multiagent Stress Test Pack
+on:
+  pull_request:
+
+jobs:
+  multiagent-stress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Multiagent Stress tests
+        run: node scripts/multiagent_stress.test.js
+        env:
+          OPENCLAW_RUNTIME_DIR: ${{ runner.temp }}/oc-stress-test
+
+      - name: Verify no network imports
+        run: |
+          if grep -qE 'require\(.*(http|https|net|dgram|dns|tls)\b' scripts/multiagent_stress.test.js; then
+            echo "FAIL: Test file imports network modules"
+            exit 1
+          fi
+          echo "PASS: No network modules imported"
+
+      - name: Verify no LLM SDK imports
+        run: |
+          if grep -qE "require\(.*(openai|@anthropic|axios|node-fetch|got)\b" scripts/multiagent_stress.test.js; then
+            echo "FAIL: LLM SDK or HTTP client import detected"
+            exit 1
+          fi
+          echo "PASS: No LLM SDK or HTTP client imports"
+
+      - name: Verify no secrets in source
+        # No-Secrets Fixture Policy:
+        # This step flags common token prefixes (sk-, ghp_, AKIA) above length
+        # thresholds to catch accidentally committed credentials.
+        #
+        # Thresholds: sk- needs 20+ alphanumeric chars after prefix,
+        #             ghp_ needs 20+ chars, AKIA needs 16 uppercase+digit chars.
+        #
+        # Test fixtures in Category E (sanitization tests) intentionally use
+        # token-like strings that are SHORTER than these thresholds but LONGER
+        # than the sanitization regex minimums (8-10 chars). This lets tests
+        # verify redaction logic without triggering this secret scanner.
+        #
+        # If adding new sanitization test fixtures, keep token bodies:
+        #   - ABOVE 8 chars (so sanitizers match them)
+        #   - BELOW 20 chars for sk-/ghp_, BELOW 16 uppercase for AKIA
+        run: |
+          if grep -qE "(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{20,}|AKIA[A-Z0-9]{16})" scripts/multiagent_stress.test.js scripts/multiagent_stress_runner.sh; then
+            echo "FAIL: Possible secret found in source"
+            exit 1
+          fi
+          echo "PASS: No secrets in source"
+
+      - name: Verify fail-closed safety patterns
+        run: |
+          node -e "
+            const src = require('fs').readFileSync('scripts/multiagent_stress.test.js', 'utf8');
+            const checks = [
+              ['killSwitchGuard', 'Kill switch guard call'],
+              ['quarantineList', 'Quarantine list check'],
+              ['SWARM_FAILCLOSED', 'Fail-closed event type'],
+              ['SWARM_KILLSWITCH_BLOCKED', 'Killswitch blocked event'],
+              ['sanitizeOutput', 'Output sanitization function'],
+              ['runtime_unavailable', 'Runtime unavailable check'],
+              ['EXEC_STRATEGY_FAILCLOSED', 'Executive strategy failclosed'],
+              ['shouldTriggerLLM', 'LLM gating function'],
+            ];
+            let ok = true;
+            for (const [pattern, desc] of checks) {
+              if (!src.includes(pattern)) {
+                console.error('FAIL: Missing safety pattern:', desc, '(' + pattern + ')');
+                ok = false;
+              } else {
+                console.log('PASS:', desc);
+              }
+            }
+            if (!ok) process.exit(1);
+          "
+
+      - name: Verify minimum test count
+        run: |
+          PASS_COUNT=$(node scripts/multiagent_stress.test.js 2>&1 | grep -c "PASS:" || true)
+          echo "Tests passing: $PASS_COUNT"
+          if [ "$PASS_COUNT" -lt 35 ]; then
+            echo "FAIL: Minimum 35 tests required, only $PASS_COUNT passing"
+            exit 1
+          fi
+          echo "PASS: $PASS_COUNT tests passing (minimum 35)"
+        env:
+          OPENCLAW_RUNTIME_DIR: ${{ runner.temp }}/oc-stress-test-count
+
+      - name: Verify stress runner has bounded token burn
+        run: |
+          # Check that the live runner enforces max_tokens <= 64
+          if ! grep -q 'MAX_TOKENS=64' scripts/multiagent_stress_runner.sh; then
+            echo "FAIL: Stress runner must have MAX_TOKENS=64"
+            exit 1
+          fi
+          if ! grep -q 'TEMPERATURE=0' scripts/multiagent_stress_runner.sh; then
+            echo "FAIL: Stress runner must have TEMPERATURE=0"
+            exit 1
+          fi
+          if ! grep -q 'killswitch' scripts/multiagent_stress_runner.sh; then
+            echo "FAIL: Stress runner must check killswitch"
+            exit 1
+          fi
+          echo "PASS: Stress runner has bounded token burn and safety checks"
