@@ -1,0 +1,92 @@
+{
+  "case_id": "tax-case-example-001",
+  "timestamp": "2026-03-04T05:00:00Z",
+  "agent_id": "payment-plan-agent",
+  "inputs_summary": {
+    "case_type": "installment_agreement",
+    "tax_years": [2022, 2023],
+    "amount_involved": 25000,
+    "urgency_level": "high",
+    "user_summary_sanitized": "User owes back taxes for 2022-2023, received balance due notice, seeking payment plan guidance",
+    "prerequisites_provided": [
+      "returns_filed",
+      "no_bankruptcy",
+      "no_prior_ia_defaults"
+    ]
+  },
+  "assumptions": [
+    "User's stated amount owed ($25,000) is accurate per IRS records",
+    "User has filed all required tax returns for 2022 and 2023",
+    "User does not have other outstanding IRS debts beyond stated amount",
+    "Standard IRS collection statute (10 years from assessment) applies",
+    "User qualifies for IRS standard allowable expense calculations"
+  ],
+  "sources": [
+    {
+      "type": "irs_publication",
+      "identifier": "IRS Pub 594",
+      "title": "The IRS Collection Process",
+      "revision": "2025",
+      "section": "Installment Agreements",
+      "page": 12,
+      "url": "https://www.irs.gov/pub/irs-pdf/p594.pdf",
+      "last_updated": "2025-01-15"
+    },
+    {
+      "type": "irs_publication",
+      "identifier": "Form 9465",
+      "title": "Installment Agreement Request",
+      "revision": "2025",
+      "url": "https://www.irs.gov/forms-pubs/about-form-9465",
+      "last_updated": "2025-01-10"
+    },
+    {
+      "type": "vault_document",
+      "identifier": "irs-pub-594-2025.pdf",
+      "last_updated": "2025-01-15"
+    },
+    {
+      "type": "tax_code",
+      "identifier": "IRC Section 6159",
+      "title": "Agreements for Payment of Tax Liability in Installments"
+    }
+  ],
+  "outputs_summary": {
+    "recommendation": "Pursue streamlined installment agreement with 72-month term",
+    "options_presented": [
+      "streamlined_ia_72_months",
+      "short_term_payment_plan_180_days",
+      "currently_not_collectible"
+    ],
+    "recommended_option": "streamlined_ia_72_months",
+    "justification": "Amount under $50k qualifies for streamlined IA with minimal financial disclosure; 72-month term provides affordable monthly payment",
+    "professional_verification_required": true,
+    "urgency_flagged": "high"
+  },
+  "risks": [
+    "Penalties and interest continue to accrue during payment plan (approximately 3-5% annually)",
+    "Missing a payment or owing new taxes can default the agreement, leading to IRS levy or lien",
+    "Payment plan may not be optimal; professional should evaluate Offer in Compromise eligibility",
+    "This analysis does NOT address potential penalty abatement (reasonable cause, first-time penalty abatement)",
+    "If user's actual monthly expenses exceed IRS allowable standards, may qualify for lower payment via non-streamlined IA"
+  ],
+  "next_questions": [
+    "Can you realistically afford $347/month payment for 6 years?",
+    "Do your actual monthly expenses exceed IRS allowable expense standards?",
+    "Should you pursue Offer in Compromise to settle for less than full amount?",
+    "Are you eligible for penalty abatement to reduce total owed?",
+    "Is the tax liability even correct? (Consider audit reconsideration if disputed)"
+  ],
+  "artifacts": [
+    {
+      "type": "response_output",
+      "format": "markdown",
+      "sanitized": true
+    },
+    {
+      "type": "calculation_worksheet",
+      "format": "json",
+      "sanitized": true
+    }
+  ]
+}

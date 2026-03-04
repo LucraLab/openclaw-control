@@ -1,0 +1,3 @@
+# Ignore events ledger (runtime output, not source code)
+events.jsonl
+*.jsonl

@@ -1,0 +1,18 @@
+{
+  "property_type": "Multi-Unit (4-8 units)",
+  "purchase_price_range": "over $1M",
+  "land_value_estimate_range": "$150k-$250k",
+  "placed_in_service_year": 2022,
+  "rehab_spend_range": "$200k-$500k",
+  "rehab_years": [2022, 2023],
+  "short_term_rental": false,
+  "business_use_pct_range": "100%",
+  "current_marginal_tax_rate_range": "35-37%",
+  "state": "Texas",
+  "entity_type": "LLC",
+  "bonus_depreciation_relevant": "yes",
+  "improvements_categories": ["Kitchen", "Flooring", "Landscaping", "Appliances", "Exterior", "HVAC", "Plumbing", "Electrical"],
+  "partial_year_service": true,
+  "_fixture_timestamp": "2026-03-04T06:06:00Z",
+  "_fixture_note": "Large multi-unit with extensive improvements. Prime cost seg candidate. NO PII."
+}

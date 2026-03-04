@@ -1,0 +1,13 @@
+{
+  "filer_type": "individual",
+  "filing_status": "single",
+  "tax_years": [2022, 2023],
+  "balance_estimate_range": "$25k-$50k",
+  "payment_capacity_range": "$500-$1000/month",
+  "state": "California",
+  "notice_received": true,
+  "hardship": false,
+  "all_returns_filed": true,
+  "_fixture_timestamp": "2026-03-04T05:20:00Z",
+  "_fixture_note": "Realistic example for streamlined IA eligibility. NO PII."
+}

@@ -1,0 +1,17 @@
+{
+  "property_type": "Single Family Home",
+  "purchase_price_range": "$250k-$500k",
+  "land_value_estimate_range": "$50k-$100k",
+  "placed_in_service_year": 2023,
+  "rehab_spend_range": "$50k-$100k",
+  "rehab_years": [2023],
+  "short_term_rental": true,
+  "business_use_pct_range": "90-100%",
+  "current_marginal_tax_rate_range": "32-35%",
+  "state": "Florida",
+  "entity_type": "LLC",
+  "bonus_depreciation_relevant": "unknown",
+  "improvements_categories": ["Kitchen", "Flooring", "HVAC", "Appliances"],
+  "_fixture_timestamp": "2026-03-04T06:05:00Z",
+  "_fixture_note": "Short-term rental with substantial rehab. Good cost seg candidate. NO PII."
+}

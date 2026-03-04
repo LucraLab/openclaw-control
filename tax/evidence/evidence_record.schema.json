@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "evidence_record.schema.json",
+  "title": "Tax Pod Evidence Record",
+  "description": "Immutable evidence record for Tax Pod operations (sanitized, no PII)",
+  "type": "object",
+  "required": [
+    "case_id",
+    "timestamp",
+    "agent_id",
+    "inputs_summary",
+    "assumptions",
+    "sources",
+    "outputs_summary",
+    "risks",
+    "next_questions",
+    "artifacts"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Unique case identifier",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC when evidence was generated"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Tax Pod agent that produced this evidence",
+      "examples": ["tax-triage-agent", "irs-notice-triage-agent", "payment-plan-agent", "cost-seg-support-agent"]
+    },
+    "inputs_summary": {
+      "type": "object",
+      "description": "Sanitized summary of user inputs (NO PII)",
+      "required": ["case_type", "tax_years", "urgency_level"],
+      "properties": {
+        "case_type": {
+          "type": "string",
+          "enum": ["back_taxes_owed", "irs_notice_response", "installment_agreement", "offer_in_compromise", "audit_support", "cost_segregation"]
+        },
+        "tax_years": {
+          "type": "array",
+          "items": {"type": "integer"}
+        },
+        "amount_involved": {
+          "type": "number",
+          "description": "Amount in USD (estimate acceptable)"
+        },
+        "urgency_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "user_summary_sanitized": {
+          "type": "string",
+          "description": "Sanitized user description (PII redacted)"
+        },
+        "prerequisites_provided": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "What user confirmed (e.g., returns_filed, no_bankruptcy)"
+        }
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "description": "Explicit assumptions made during analysis"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "identifier"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["irs_publication", "tax_code", "vault_document", "irs_notice", "case_law"]
+          },
+          "identifier": {
+            "type": "string",
+            "description": "IRS Pub number, IRC section, vault doc ID, etc."
+          },
+          "title": {"type": "string"},
+          "revision": {"type": "string", "description": "Year or version"},
+          "section": {"type": "string"},
+          "page": {"type": "integer"},
+          "url": {"type": "string", "format": "uri"},
+          "last_updated": {"type": "string", "format": "date"}
+        }
+      },
+      "minItems": 1,
+      "description": "Citation objects for all sources used"
+    },
+    "outputs_summary": {
+      "type": "object",
+      "description": "Sanitized summary of recommendations (NO PII)",
+      "required": ["recommendation", "options_presented", "professional_verification_required"],
+      "properties": {
+        "recommendation": {
+          "type": "string",
+          "description": "Primary recommendation provided"
+        },
+        "options_presented": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Array of option names presented to user"
+        },
+        "recommended_option": {
+          "type": "string",
+          "description": "Which option was recommended"
+        },
+        "justification": {
+          "type": "string",
+          "description": "Why this option was recommended"
+        },
+        "professional_verification_required": {
+          "type": "boolean",
+          "description": "Whether professional verification is mandatory"
+        },
+        "urgency_flagged": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "description": "Risk statements disclosed to user"
+    },
+    "next_questions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "description": "What user/professional should verify or answer"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["proof_pack", "response_output", "calculation_worksheet"]
+          },
+          "path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "format": {"type": "string", "examples": ["markdown", "json", "pdf"]},
+          "sanitized": {"type": "boolean", "description": "Whether PII was redacted"}
+        }
+      },
+      "description": "References to proof packs, outputs, or related artifacts"
+    },
+    "supersedes": {
+      "type": "string",
+      "description": "If updating prior evidence, reference to superseded case_id"
+    },
+    "update_reason": {
+      "type": "string",
+      "description": "If superseding, explanation of why update was needed"
+    }
+  }
+}

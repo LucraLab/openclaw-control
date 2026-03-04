@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "generated_utc": "2026-03-04T05:42:37Z",
+  "sources": {
+    "irm-5.14.1": {
+      "id": "irm-5.14.1",
+      "title": "IRM 5.14.1 — Securing Installment Agreements",
+      "url": "https://www.irs.gov/irm/part5/irm_05-014-001",
+      "category": "installment_agreement",
+      "tax_year_scope": "all",
+      "format": "html",
+      "path": "tax/vault/raw/irm-5.14.1/source.html",
+      "parseable": "yes",
+      "notes": "HTML fixture for installment agreement guidance",
+      "last_updated": "2026-02-15T00:00:00.000Z"
+    },
+    "irm-20.1.1": {
+      "id": "irm-20.1.1",
+      "title": "IRM 20.1.1 — Introduction and Penalty Relief",
+      "url": "https://www.irs.gov/irm/part20/irm_20-001-001",
+      "category": "penalty_abatement",
+      "tax_year_scope": "all",
+      "format": "html",
+      "path": "tax/vault/raw/irm-20.1.1/source.html",
+      "parseable": "yes",
+      "notes": "HTML fixture for penalty relief concepts",
+      "last_updated": "2026-02-15T00:00:00.000Z"
+    },
+    "form-656": {
+      "id": "form-656",
+      "title": "Form 656 — Offer in Compromise",
+      "url": "https://www.irs.gov/pub/irs-pdf/f656.pdf",
+      "category": "oic",
+      "tax_year_scope": "all",
+      "format": "pdf",
+      "path": "tax/vault/raw/form-656/source.pdf",
+      "parseable": "no",
+      "notes": "PDF: do not parse in P6; cite as document only",
+      "last_updated": "2026-02-15T00:00:00.000Z"
+    },
+    "cfs-national": {
+      "id": "cfs-national",
+      "title": "Collection Financial Standards — National Standards",
+      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/national-standards-food-clothing-and-other-items",
+      "category": "collection_standards",
+      "tax_year_scope": "current",
+      "format": "html",
+      "path": "tax/vault/raw/cfs-national/source.html",
+      "parseable": "yes",
+      "notes": "HTML fixture for collection standards",
+      "last_updated": "2026-02-15T00:00:00.000Z"
+    }
+  },
+  "missing_sources": [
+    {
+      "id": "pub-594",
+      "title": "IRS Publication 594 — The IRS Collection Process",
+      "reason": "not present in vault",
+      "needed_for": "installment_agreement",
+      "notes": "Referenced in payment_plan_first but not yet imported"
+    },
+    {
+      "id": "form-9465",
+      "title": "Form 9465 — Installment Agreement Request",
+      "reason": "not present in vault",
+      "needed_for": "installment_agreement",
+      "notes": "Referenced in payment_plan_first but not yet imported"
+    }
+  ]
+}

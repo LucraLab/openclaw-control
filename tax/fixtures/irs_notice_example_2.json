@@ -1,0 +1,14 @@
+{
+  "notice_code": "LT11",
+  "notice_summary": "Final Notice - Intent to Levy. Your assets may be seized if you do not respond by the deadline.",
+  "tax_year": 2022,
+  "amount_due_range": "over $50k",
+  "received_date": "2026-02-20",
+  "deadline_date": "2026-03-05",
+  "has_filed_all_returns": false,
+  "hardship": true,
+  "contact_attempted": false,
+  "state": "Texas",
+  "_fixture_timestamp": "2026-03-04T05:55:00Z",
+  "_fixture_note": "Severe notice (intent to levy). Urgent deadline. Missing filings. Hardship. NO PII."
+}

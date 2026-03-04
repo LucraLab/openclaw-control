@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "cost_segregation_intake.schema.json",
+  "title": "Cost Segregation Study Intake",
+  "description": "Rental property cost segregation support intake",
+  "type": "object",
+  "required": [
+    "case_id",
+    "intake_timestamp",
+    "property_type",
+    "property_purchase_price",
+    "property_purchase_date",
+    "property_placed_in_service_date"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "intake_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "property_type": {
+      "type": "string",
+      "enum": [
+        "single_family",
+        "multi_family",
+        "commercial",
+        "mixed_use",
+        "land_only"
+      ],
+      "description": "Type of rental property"
+    },
+    "property_purchase_price": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total purchase price (USD)"
+    },
+    "property_purchase_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date property was purchased"
+    },
+    "property_placed_in_service_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date property was placed in service (rental started)"
+    },
+    "property_improvements_cost": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Cost of improvements/renovations (if any)"
+    },
+    "property_land_value": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Assessed land value (non-depreciable)"
+    },
+    "has_done_cost_seg_before": {
+      "type": "boolean",
+      "description": "Whether cost seg study already completed for this property"
+    },
+    "pii": {
+      "type": "object",
+      "properties": {
+        "name_full": {
+          "type": "string",
+          "description": "REDACT in logs/proofs"
+        },
+        "property_address": {
+          "type": "string",
+          "description": "REDACT in logs/proofs (PII - exact address)"
+        }
+      }
+    },
+    "goal": {
+      "type": "string",
+      "enum": [
+        "maximize_depreciation",
+        "reduce_current_tax_liability",
+        "understand_feasibility",
+        "prep_for_pro_study"
+      ],
+      "description": "Primary goal of cost seg inquiry"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "filer_type": "individual",
+  "filing_status": "married_joint",
+  "tax_years": [2020, 2021, 2022],
+  "balance_estimate_range": "over $50k",
+  "payment_capacity_range": "$1000-$2000/month",
+  "state": "Texas",
+  "notice_received": false,
+  "hardship": true,
+  "all_returns_filed": false,
+  "_fixture_timestamp": "2026-03-04T05:21:00Z",
+  "_fixture_note": "Complex case: higher balance, missed filings, hardship. Requires professional help. NO PII."
+}

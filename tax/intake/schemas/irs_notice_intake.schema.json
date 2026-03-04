@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "irs_notice_intake.schema.json",
+  "title": "IRS Notice Intake",
+  "description": "Schema for triaging IRS notices (CP series, levy notices, etc.)",
+  "type": "object",
+  "required": [
+    "case_id",
+    "intake_timestamp",
+    "notice_type",
+    "notice_date",
+    "response_deadline",
+    "user_summary"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Unique case identifier",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "intake_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notice_type": {
+      "type": "string",
+      "description": "IRS notice code (e.g., CP2000, CP14, CP504, Letter 1058)",
+      "examples": ["CP2000", "CP14", "CP504", "Letter 1058", "CP523"]
+    },
+    "notice_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date on IRS notice"
+    },
+    "response_deadline": {
+      "type": "string",
+      "format": "date",
+      "description": "Deadline to respond (if specified)"
+    },
+    "amount_claimed": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Amount IRS claims is owed (if applicable)"
+    },
+    "user_summary": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "User's summary of notice content"
+    },
+    "pii": {
+      "type": "object",
+      "description": "PII fields requiring redaction",
+      "properties": {
+        "name_full": {
+          "type": "string",
+          "description": "REDACT in logs/proofs"
+        },
+        "ssn_last_4": {
+          "type": "string",
+          "pattern": "^[0-9]{4}$"
+        }
+      }
+    },
+    "urgency_override": {
+      "type": "boolean",
+      "description": "Force critical urgency (levy/lien notices)"
+    }
+  }
+}
